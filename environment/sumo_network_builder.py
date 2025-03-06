@@ -827,14 +827,14 @@ class SumoNetworkBuilder:
                 <phase duration="10" state="rrrrgGGGgrrrrrrrrrrrrr"/>
                 <phase duration="10" state="grrrrrrGgrrrrrrGrrrrrr"/>
                 <phase duration="10" state="rrrrrrrrrrrrrrrrGGGGGG"/>
-                <phase duration="5" state="yyyrrrrryyyrrrrrrrrrrr"/>
-                <phase duration="5" state="yyyyrrrrrrrrrrrrrrrrrr"/>
-                <phase duration="5" state="rrrrrrrryyyyyrrrrrrrrr"/>
-                <phase duration="5" state="rrryyrrrrrryyrrrrrrrrr"/>
-                <phase duration="5" state="rrrryyyrrrrryyyrrrrrrr"/>
-                <phase duration="5" state="yrrrrrrrrrrryyyyrrrrrr"/>
-                <phase duration="5" state="rrrryyyyyrrrrrrrrrrrrr"/>
-                <phase duration="5" state="yrrrrrryyrrrrrryrrrrrr"/>
+                <phase duration="3" state="yyyrrrrryyyrrrrrrrrrrr"/>
+                <phase duration="3" state="yyyyrrrrrrrrrrrrrrrrrr"/>
+                <phase duration="3" state="rrrrrrrryyyyyrrrrrrrrr"/>
+                <phase duration="3" state="rrryyrrrrrryyrrrrrrrrr"/>
+                <phase duration="3" state="rrrryyyrrrrryyyrrrrrrr"/>
+                <phase duration="3" state="yrrrrrrrrrrryyyyrrrrrr"/>
+                <phase duration="3" state="rrrryyyyyrrrrrrrrrrrrr"/>
+                <phase duration="3" state="yrrrrrryyrrrrrryrrrrrr"/>
                 <phase duration="20" state="rrrrrrrrrrrrrrrrrrrrrr"/>
                     """,
                         file=additionals,
@@ -861,13 +861,13 @@ class SumoNetworkBuilder:
                     print(
                         """
                 <phase duration="30" state="gGGrrrrrgGGrrrrrrrrrrr"/>
-                <phase duration="5" state="yyyrrrrryyyrrrrrrrrrrr"/>
+                <phase duration="3" state="yyyrrrrryyyrrrrrrrrrrr"/>
                 <phase duration="10" state="rrrGgrrrrrrGgrrrrrrrrr"/>
-                <phase duration="5" state="rrryyrrrrrryyrrrrrrrrr"/>
+                <phase duration="3" state="rrryyrrrrrryyrrrrrrrrr"/>
                 <phase duration="30" state="rrrrgGGrrrrrgGGrrrrrrr"/>
-                <phase duration="5" state="rrrryyyrrrrryyyrrrrrrr"/>
+                <phase duration="3" state="rrrryyyrrrrryyyrrrrrrr"/>
                 <phase duration="10" state="grrrrrrGgrrrrrrGrrrrrr"/>
-                <phase duration="5" state="yrrrrrryyrrrrrryrrrrrr"/>
+                <phase duration="3" state="yrrrrrryyrrrrrryrrrrrr"/>
                     """,
                         file=additionals,
                     )
@@ -892,13 +892,13 @@ class SumoNetworkBuilder:
                 <param key="freq" value="300"/>
 
                 <phase duration="33" minDur="20" maxDur="45"  state="gGGrrrrrgGGrrrrrrrrrrr"/>
-                <phase duration="5" state="yyyrrrrryyyrrrrrrrrrrr"/>
+                <phase duration="3" state="yyyrrrrryyyrrrrrrrrrrr"/>
                 <phase duration="33" minDur="10" maxDur="45"  state="rrrGgrrrrrrGgrrrrrrrrr"/>
-                <phase duration="5" state="rrryyrrrrrryyrrrrrrrrr"/>
+                <phase duration="3" state="rrryyrrrrrryyrrrrrrrrr"/>
                 <phase duration="33" minDur="20" maxDur="45"  state="rrrrgGGrrrrrgGGrrrrrrr"/>
-                <phase duration="5" state="rrrryyyrrrrryyyrrrrrrr"/>
+                <phase duration="3" state="rrrryyyrrrrryyyrrrrrrr"/>
                 <phase duration="33" minDur="10" maxDur="45"  state="grrrrrrGgrrrrrrGrrrrrr"/>
-                <phase duration="5" state="yrrrrrryyrrrrrryrrrrrr"/>
+                <phase duration="3" state="yrrrrrryyrrrrrryrrrrrr"/>
                     """,
                         file=additionals,
                     )
@@ -920,13 +920,13 @@ class SumoNetworkBuilder:
                         print(
                             """
                     <phase duration="30" state="gGGrrrrrgGGrrrrrrrrrrr"/>
-                    <phase duration="5" state="yyyrrrrryyyrrrrrrrrrrr"/>
+                    <phase duration="3" state="yyyrrrrryyyrrrrrrrrrrr"/>
                     <phase duration="10" state="rrrGgrrrrrrGgrrrrrrrrr"/>
-                    <phase duration="5" state="rrryyrrrrrryyrrrrrrrrr"/>
+                    <phase duration="3" state="rrryyrrrrrryyrrrrrrrrr"/>
                     <phase duration="30" state="rrrrgGGrrrrrgGGrrrrrrr"/>
-                    <phase duration="5" state="rrrryyyrrrrryyyrrrrrrr"/>
+                    <phase duration="3" state="rrrryyyrrrrryyyrrrrrrr"/>
                     <phase duration="10" state="grrrrrrGgrrrrrrGrrrrrr"/>
-                    <phase duration="5" state="yrrrrrryyrrrrrryrrrrrr"/>
+                    <phase duration="3" state="yrrrrrryyrrrrrryrrrrrr"/>
                         """,
                             file=additionals,
                         )

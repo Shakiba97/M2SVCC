@@ -25,6 +25,7 @@ class SumoRoutesGenerator:
         left_right_ratio = self.paras["left_right_ratio"]
         seed = self.paras["random_seed"]
         simulation_dur = self.paras["simulation_duration"]
+        ratio_ev = self.paras["ratio_ev"]
         random.seed(seed)  # make tests reproducible
 
         cav_WEid = set()
@@ -344,4 +345,17 @@ class SumoRoutesGenerator:
                 "all": set.union(hdv_WEid, hdv_EWid, hdv_others),
             }
             # total_number = vehNr_WE + vehNr_WN + vehNr_WS + vehNr_SN + vehNr_SE + vehNr_SW + vehNr_EW + vehNr_EN + vehNr_ES + vehNr_NS + vehNr_NE + vehNr_NW
-        return cav_ids, hdv_ids
+
+        veh_id_with_ev = {"cav_ice": set(), "cav_ev": set(), "hdv_ice": set(), "hdv_ev": set()}
+        for temp in cav_ids["all"]:
+            if random.uniform(0, 1) < ratio_ev:
+                veh_id_with_ev["cav_ev"].add(temp)
+            else:
+                veh_id_with_ev["cav_ice"].add(temp)
+        for temp in hdv_ids["all"]:
+            if random.uniform(0, 1) < ratio_ev:
+                veh_id_with_ev["hdv_ev"].add(temp)
+            else:
+                veh_id_with_ev["hdv_ice"].add(temp)
+
+        return cav_ids, hdv_ids, veh_id_with_ev

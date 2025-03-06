@@ -23,10 +23,11 @@ class SingleIntersection:
 
         print("--------Generating vehicles and routes")
         routes_generator = SumoRoutesGenerator(self.paras)
-        cav_ids, hdv_ids = routes_generator.generate_routes_for_single_intersection()
+        cav_ids, hdv_ids, veh_id_with_ev = routes_generator.generate_routes_for_single_intersection()
         self.paras["ped_ids"] = set()
         self.paras["cav_ids"] = cav_ids
         self.paras["hdv_ids"] = hdv_ids
+        self.paras["veh_id_with_ev"] = veh_id_with_ev
         self.fuel_total_cav_external_model = 0
         self.fuel_total_hdv_external_model = 0
         self.fuel_total_cav_sumo = 0

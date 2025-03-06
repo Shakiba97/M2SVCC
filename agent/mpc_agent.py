@@ -3,7 +3,6 @@
 import os
 import sys
 import traci
-
 from gams import *
 
 
@@ -18,6 +17,7 @@ class MpcAgent:
         """
         self.phase_list_multi=[]
         self.duration_list_multi=[]
+        self.paras = paras
 
         ## Check if the intersection type is supported.
         if intersection_type not in ["unified_four_legs_three_lanes"]:
@@ -158,7 +158,7 @@ class MpcAgent:
         for ind in range(self.num_lanes):
             lane_length.add_record(str(ind + 1)).value = self.len_lane
 
-    def set_slower_scale_dynamic_paras_single_intersection(self, paras, intersection_state):
+    def set_slower_scale_dynamic_paras_single_intersection(self, intersection_state):
         """Set the dynamic parameters of the slower scale model
 
         Args that we will get from intersection_state:
@@ -180,7 +180,7 @@ class MpcAgent:
         cur_phase = intersection_state["signal_phase"]
         num_vehicles_max = intersection_state["num_vehicles_max"]
         pedestrian_demand=intersection_state["pedestrian_demand"]
-        weights= paras["weight(Vehicles/Pedestrians)"]
+        weights= self.paras["weight(Vehicles/Pedestrians)"]
 
         i = self.db_slower.add_set("i", 1, "vehicles")
         for ind in range(1, num_vehicles_max + 1):
@@ -257,7 +257,7 @@ class MpcAgent:
             raise RuntimeError("Fail to solve the slower scale problem.")
 
     def collect_solution_from_slower_scale_problem_single_intersection(
-        self, paras, intersection_state
+        self, intersection_state
     ):
         """Collect solutions from the solower scale problem"""
         num_vehicles_max = intersection_state["num_vehicles_max"]
@@ -330,7 +330,7 @@ class MpcAgent:
         if following_phases[0] == -1:
             if current_phase == 8:
                 prv_step = self.next_global_step_to_re_solve_the_netwok
-                all_red_clearance= int(paras['X_crossing_length']/paras['ped_speed'])
+                all_red_clearance= int(self.paras['X_crossing_length']/self.paras['ped_speed'])
                 # print("all_red_clearance: ", all_red_clearance)
                 all_red_clearance=15
                 self.next_global_step_to_re_solve_the_netwok += int(
@@ -360,7 +360,7 @@ class MpcAgent:
                 if self.is_extended==False:
                     for dir in ped_phase_map[next]:
                         if ped_demand[dir] > 0:
-                            minimum_green = 3.2 + paras['crossing_length']/paras['ped_speed']+2.7*ped_demand[dir]/(paras['crossing_width']*3.28)
+                            minimum_green = 3.2 + self.paras['crossing_length']/self.paras['ped_speed']+2.7*ped_demand[dir]/(self.paras['crossing_width']*3.28)
                             Gp = max(Gp, minimum_green)
                     #print("Gp: ", Gp)
                     self.extension_steps = max(int(Gp / self.delta_T) + 1, 1)
@@ -427,6 +427,7 @@ class MpcAgent:
         pos_vehicles_init,
         speed_vehicles_init,
         steps_faster,
+        id_vehicles_init,
     ):
         """Set the dynamic parameters of the faster scale model
 
@@ -488,6 +489,11 @@ class MpcAgent:
             [i],
             "indicator of vehicles to calculate the car-following distances",
         )
+        veh_ice = self.db_faster.add_parameter_dc(
+            "veh_ice",
+            [i],
+            "indicator of whether the vehicle is an ice or not")
+
         for ind_i in range(len(pos_vehicles_init)):
             s_init.add_record((str(ind_i + 1))).value = pos_vehicles_init[ind_i]
             v_init.add_record((str(ind_i + 1))).value = speed_vehicles_init[ind_i]
@@ -497,6 +503,10 @@ class MpcAgent:
                 s_critical.add_record(
                     (str(ind_i + 1), str(critical_points[ind_j] + 1))
                 ).value = pos_vehicles_point[ind_i][ind_j]
+            if id_vehicles_init[ind_i] in self.paras["veh_id_with_ev"]["cav_ice"] or id_vehicles_init[ind_i] in self.paras["veh_id_with_ev"]["hdv_ice"]:
+                veh_ice.add_record((str(ind_i + 1))).value = 1
+            else:
+                veh_ice.add_record((str(ind_i + 1))).value = 0
 
     def run_gams_to_solve_faster_scale_problem_single_lane(self):
         """Run the corresponding GAMS model to solve the faster scale problem"""
@@ -519,15 +529,13 @@ class MpcAgent:
         for rec in self.model_faster.out_db["s"]:
             s_vehicles_faster[int(rec.key(1)) - 1][ind_lane].append(rec.level)
 
-    def solve_slower_scale_problem_single_intersection(self, paras, intersection_state):
+    def solve_slower_scale_problem_single_intersection(self, intersection_state):
         """Solve one slwoer scale problem"""
         self.db_slower = self.ws.add_database()
         self.set_slower_scale_constant_paras_single_intersection()
-        self.set_slower_scale_dynamic_paras_single_intersection(paras, intersection_state)
+        self.set_slower_scale_dynamic_paras_single_intersection(intersection_state)
         self.run_gams_to_solve_slower_scale_problem_single_intersection()
-        self.collect_solution_from_slower_scale_problem_single_intersection(
-            paras, intersection_state
-        )
+        self.collect_solution_from_slower_scale_problem_single_intersection(intersection_state)
 
     def solve_faster_scale_problem_single_intersection(
         self, critical_points, s_vehicles_point, steps_faster, intersection_state
@@ -548,6 +556,7 @@ class MpcAgent:
             # Get the initial speed of vehicles on this lane.
             speed_vehicles_init = intersection_state["speed_vehicles"][i]
             if speed_vehicles_init:
+                id_vehicles_init = intersection_state["vehicle_id"][i]
                 pos_vehicles_init = intersection_state["pos_vehicles"][i]
                 pos_vehicles_point = s_vehicles_point[i]
                 self.db_faster = self.ws.add_database()
@@ -557,6 +566,7 @@ class MpcAgent:
                     pos_vehicles_init,
                     speed_vehicles_init,
                     steps_faster,
+                    id_vehicles_init,
                 )
                 self.run_gams_to_solve_faster_scale_problem_single_lane()
                 self.collect_solution_from_faster_scale_problem_single_lane(
@@ -580,7 +590,7 @@ class MpcAgent:
     def solve_single_intersection(self, paras, intersection_state):
         self.vehicle_ids = intersection_state["vehicle_id"]
         self.gather_static_paras_single_intersection(paras)
-        self.solve_slower_scale_problem_single_intersection(paras, intersection_state)
+        self.solve_slower_scale_problem_single_intersection(intersection_state)
         (
             critical_points,
             s_vehicles_point,
@@ -672,7 +682,7 @@ class MpcAgent:
                             speed_commands[veh_id] = v_command
         return speed_commands
 
-    def get_control_commands(self, paras, network_state, cur_step):
+    def get_control_commands(self, network_state, cur_step):
         """Get control commands from the agent.
 
         Args:
@@ -688,7 +698,7 @@ class MpcAgent:
                 with keys as the vehicles ids and values as the adjusted speed commands.
         """
 
-        if len(paras["traffic_graph"]) != 1:
+        if len(self.paras["traffic_graph"]) != 1:
             raise TypeError("The MPC agent only supports single_intersection scenario.")
         should_update_signal = False
         if cur_step >= self.next_global_step_to_re_solve_the_netwok:
@@ -697,7 +707,7 @@ class MpcAgent:
             for inter_id in network_state:
                 if network_state[inter_id]["num_vehicles_max"] > 0:
                     print("--------Solve intersection: ", inter_id)
-                    self.solve_single_intersection(paras, network_state[inter_id])
+                    self.solve_single_intersection(self.paras, network_state[inter_id])
                     should_update_signal = True
         else:
             self.current_step_in_faster_scale_solution += 1
