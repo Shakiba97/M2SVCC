@@ -40,7 +40,7 @@ def set_common_paras(paras):
     # The highest volume, in veh/h.
     paras["high_volume_veh"] = 400
     # Ratio of Electric Vehicles (between 0 and 1)
-    paras["ratio_ev"] = 0
+    paras["ratio_ev"] = 0.5
     # Poisson gamma for pedestrian demand
     paras["poisson_gamma_pedestrian"] = 0.04  # high:0.04 medium=0.02 low=0.01
     paras["ped_demand_symmetry"] = "Asymmetric" # Asymmetric or Symmetric pedestrian demand

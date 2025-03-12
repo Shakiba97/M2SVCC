@@ -30,6 +30,8 @@ class SingleIntersection:
         self.paras["veh_id_with_ev"] = veh_id_with_ev
         self.fuel_total_cav_external_model = 0
         self.fuel_total_hdv_external_model = 0
+        self.power_total_cav_external_model = 0
+        self.power_total_hdv_external_model = 0
         self.fuel_total_cav_sumo = 0
         self.fuel_total_hdv_sumo = 0
         self.phase_list_fix_act =[]
@@ -457,8 +459,14 @@ class SingleIntersection:
         self.get_average_queue_length_endtime(queue_file)
         self.get_average_phase_duration(phase_list_multi, duration_list_multi, control_type)
         right_conflicts=self.right_turn_conflicts_measure()
-        print(f"average fuel consumption (external model) for {control_type} (in mg): ",
-              self.fuel_total_cav_external_model / len(self.paras["cav_ids"]["all"]))
+        print(f"average fuel consumption (external model) for CAVs {control_type} (in mg): ",
+              self.fuel_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ice"]),1))
+        print(f"average fuel consumption (external model) for HDVs {control_type} (in mg): ",
+              self.fuel_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ice"]),1))
+        print(f"average power consumption (external model) for CAVs {control_type} (in Kw.s): ",
+              self.power_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ev"]),1))
+        print(f"average power consumption (external model) for HDVs {control_type} (in Kw.s): ",
+              self.power_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ev"]),1))
         # print(f"average fuel consumption (SUMO output) for {control_type} (in mg): ",
         #       self.fuel_total_cav_sumo / len(self.paras["cav_ids"]["all"]))
         print(f"average waiting time for {control_type} (in s): ",
@@ -474,9 +482,17 @@ class SingleIntersection:
               len(self.paras["cav_ids"]["all"]))
         print(f"number of pedestrians passing through the specific intersection for {control_type}: ",
               len(self.paras["ped_ids"]))
-        print(f"The time of simulation termination in {control_type} scenario:",step/2 )
-        with open(f"Results/Metrics_Results_{control_type}_scenario.txt", 'w') as file:
-            file.write(f"average fuel consumption for {control_type} scenario (external model) (in mg): {self.fuel_total_cav_external_model / len(self.paras['cav_ids']['all'])}\n")
+        print(f"The time of simulation termination in {control_type} scenario:",step/2)
+        if control_type == "multi_scale":
+            file_name = f"Results/Metrics_Results_{control_type}_scenario_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}.txt"
+        else:
+            file_name = f"Results/Metrics_Results_{control_type}_scenario_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]}).txt"
+        with open(file_name, 'w') as file:
+            file.write(f"average fuel consumption (external model) for CAVs {control_type} (in mg): {self.fuel_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ice"]),1)}\n")
+            file.write(f"average fuel consumption (external model) for HDVs {control_type} (in mg): {self.fuel_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ice"]),1)}\n")
+            file.write(f"average power consumption (external model) for CAVs {control_type} (in Kw.s): {self.power_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ev"]),1)}\n")
+            file.write(f"average power consumption (external model) for HDVs {control_type} (in Kw.s): {self.power_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ev"]),1)}\n")
+
             #file.write(f"average fuel consumption for {control_type} scenario (SUMO output) (in mg): {self.fuel_total_cav_sumo / len(self.paras['cav_ids']['all'])}\n")
             file.write(f"average waiting time for {control_type} scenario (in s): {self.waiting_time_avg}\n")
             file.write(f"average time loss for {control_type} scenario (in s): {self.lost_time_avg}\n")
@@ -576,16 +592,25 @@ class SingleIntersection:
 
 
     def calculate_extra_metrics(self):
-        temp_cav, temp_hdv = self.get_instant_fuel_external_model()
-        self.fuel_total_cav_external_model += temp_cav
-        self.fuel_total_hdv_external_model += temp_hdv
+        fuel_cav, fuel_hdv, power_cav, power_hdv = self.get_instant_fuel_external_model()
+        print("fuel_cav", fuel_cav)
+        print("fuel_hdv", fuel_hdv)
+        print("power_cav", power_cav)
+        print("power_hdv", power_hdv)
+        self.fuel_total_cav_external_model += fuel_cav
+        self.fuel_total_hdv_external_model += fuel_hdv
+        self.power_total_cav_external_model += power_cav
+        self.power_total_hdv_external_model += power_hdv
         temp_cav, temp_hdv = self.get_instant_fuel_sumo()
         self.fuel_total_cav_sumo += temp_cav
         self.fuel_total_hdv_sumo += temp_hdv
 
+
     def get_instant_fuel_external_model(self):
         fuel_cav = 0
         fuel_hdv = 0
+        power_cav = 0
+        power_hdv = 0
         for inter_id in self.paras["traffic_graph"]:
             lane_id = []
             for direction in ["west", "south", "east", "north"]:
@@ -609,11 +634,17 @@ class SingleIntersection:
                         + 0.0245 * speed * acc**2
                         - 0.0489 * acc**3
                     )
-                    if cars_lane[j] in self.paras["cav_ids"]["all"]:
+                    power_temp_temp = (1266 * speed * acc + 1266 * 9.8 * 0.006 * speed + 1.3 * speed ** 3) / 1000
+                    power_temp = power_temp_temp if power_temp_temp > 0 else 0.9 * power_temp_temp
+                    if cars_lane[j] in self.paras["veh_id_with_ev"]['cav_ice']:
                         fuel_cav += fuel_temp
-                    else:
+                    elif cars_lane[j] in self.paras["veh_id_with_ev"]["hdv_ice"]:
                         fuel_hdv += fuel_temp
-        return fuel_cav, fuel_hdv
+                    elif cars_lane[j] in self.paras["veh_id_with_ev"]["cav_ev"]:
+                        power_cav += power_temp
+                    elif cars_lane[j] in self.paras["veh_id_with_ev"]["hdv_ev"]:
+                        power_hdv += power_temp
+        return fuel_cav, fuel_hdv, power_cav, power_hdv
 
     def get_instant_fuel_sumo(self):
         fuel_cav = 0

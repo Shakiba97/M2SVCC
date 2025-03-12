@@ -259,7 +259,7 @@ class MpcAgent:
     def collect_solution_from_slower_scale_problem_single_intersection(
         self, intersection_state
     ):
-        """Collect solutions from the solower scale problem"""
+        """Collect solutions from the slower scale problem"""
         num_vehicles_max = intersection_state["num_vehicles_max"]
         p_gams = [[] for _ in range(self.num_phases)]
         s_vehicles_slower = [
@@ -346,33 +346,59 @@ class MpcAgent:
                 self.is_extended = False
                 self.extension_steps = 1
         else:
-        # check for pedestrian extension:
-            Gp = 0
-            next = following_phases[0]
-            after_next = following_phases[1]
-            two_after_next = following_phases[2]
+            # check for pedestrian extension:
+            if self.paras["ped_phasing"] == "Exclusive":
+                Gp = 0
+                next = following_phases[0]
 
-            self.extension_steps = max(1, self.extension_steps-1)
-            if self.extension_steps > 1:
-                self.is_extended = True
-            #print("is previously extended: ", self.is_extended)
-            if next == 8:
-                if self.is_extended==False:
+                self.extension_steps = max(1, self.extension_steps - 1)
+                if self.extension_steps > 1:
+                    self.is_extended = True
+                # print("is previously extended: ", self.is_extended)
+                if next == 8:
+                    if self.is_extended == False:
+                        for dir in ped_phase_map[next]:
+                            if ped_demand[dir] > 0:
+                                minimum_green = 3.2 + self.paras['crossing_length'] / self.paras['ped_speed'] + 2.7 * \
+                                                ped_demand[dir] / (self.paras['crossing_width'] * 3.28)
+                                Gp = max(Gp, minimum_green)
+                        # print("Gp: ", Gp)
+                        self.extension_steps = max(int(Gp / self.delta_T) + 1, 1)
+                        # print("extension steps just calculated: ", self.extension_steps)
+                else:
+                    Gp = 0
+                    # Gp = min(Gp, 20)
+                    # print("ultimate Gp: ", Gp)
+                prv_step = self.next_global_step_to_re_solve_the_netwok
+                self.next_global_step_to_re_solve_the_netwok += int(
+                    self.delta_T / self.delta_T_faster
+                )
+            elif self.paras["ped_phasing"] == "Concurrent":
+                # check for pedestrian extension:
+                Gp = 0
+                next = following_phases[0]
+                after_next = following_phases[1]
+                self.extension_steps = max(1, self.extension_steps - 1)
+                if self.extension_steps > 1:
+                    self.is_extended = True
+                print("is previously extended: ", self.is_extended)
+                if next != after_next and self.is_extended == False:
+                    # if (next != after_next or current_phase==8) and self.is_extended==False:
                     for dir in ped_phase_map[next]:
+                        # print(f"pedestrian demand for {dir} direction is:", ped_demand[dir])
                         if ped_demand[dir] > 0:
-                            minimum_green = 3.2 + self.paras['crossing_length']/self.paras['ped_speed']+2.7*ped_demand[dir]/(self.paras['crossing_width']*3.28)
+                            # print(f"pedestrian demand for {dir} direction is:", ped_demand[dir])
+                            minimum_green = 3.2 + self.paras['crossing_length'] / self.paras['ped_speed'] + 2.7 * ped_demand[
+                                dir] / (self.paras['crossing_width'] * 3.28)
                             Gp = max(Gp, minimum_green)
-                    #print("Gp: ", Gp)
+                    # print("Gp: ", Gp)
                     self.extension_steps = max(int(Gp / self.delta_T) + 1, 1)
-                    #print("extension steps just calculated: ", self.extension_steps)
-            else:
-                Gp=0
-                # Gp = min(Gp, 20)
-                # print("ultimate Gp: ", Gp)
-            prv_step=self.next_global_step_to_re_solve_the_netwok
-            self.next_global_step_to_re_solve_the_netwok += int(
-                self.delta_T / self.delta_T_faster
-            )
+                    # print("extension steps just calculated: ", self.extension_steps)
+                    Gp = 0
+                prv_step = self.next_global_step_to_re_solve_the_netwok
+                self.next_global_step_to_re_solve_the_netwok += int(
+                    max(self.delta_T, Gp) / self.delta_T_faster
+                )
         self.phase_list_multi.append(following_phases[0])
         self.duration_list_multi.append((self.next_global_step_to_re_solve_the_netwok-prv_step)*0.5)
         # if ((self.next_global_step_to_re_solve_the_netwok-prv_step)*0.5)>30:
@@ -522,6 +548,21 @@ class MpcAgent:
         self, ind_lane, a_vehicles_faster, v_vehicles_faster, s_vehicles_faster
     ):
         """Collect solutions from the faster scale problem"""
+        f_inst_ev = {}
+        f_inst_ice = {}
+        f = []
+        # for item in self.model_faster.out_db["f_inst_ev"]:
+        #     f_inst_ev.setdefault(item.level, [])
+        #     f_inst_ev[item.level].append(item.level)
+        # for item in self.model_faster.out_db["f_inst_ice"]:
+        #     f_inst_ice.setdefault(item.level, [])
+        #     f_inst_ice[item.level].append(item.level)
+        # for item in self.model_faster.out_db["f"]:
+        #     f.append(item.level)
+        # print(sum(sum(v) for v in f_inst_ev.values()))
+        # print(sum(sum(v) for v in f_inst_ice.values()))
+        # print(f[-1])
+        # a=2
         for rec in self.model_faster.out_db["a"]:
             a_vehicles_faster[int(rec.key(1)) - 1][ind_lane].append(rec.level)
         for rec in self.model_faster.out_db["v"]:
