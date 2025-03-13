@@ -19,8 +19,8 @@ def main(network_type, volume_type, control_type):
     agent_unified_four_legs_three_lanes = MpcAgent(paras, "unified_four_legs_three_lanes")
     agent_unified_four_legs_three_lanes.clear_redundant_gams_files()
 
-    phase_list_multi=[]
-    duration_list_multi=[]
+    phase_list_multi = []
+    duration_list_multi = []
     step = 0
     while env_single_intersection.is_active():
 

@@ -1,6 +1,6 @@
 *option nlp=SCIP;
-option nlp=IPOPT;
-*option nlp=CONOPT;
+*option nlp=IPOPT;
+option nlp=CONOPT;
 
 parameter
          model_status,
@@ -35,6 +35,8 @@ variable
          v(i,k) 'speed of vehicle i on lane k at time step k',
          s(i,k) 'position of vehicle i on lane k at time step k';
 
+positive variable a_plus(i,k) 'tp help with power consumption function';
+
 equations
          cost 'cost function',
          fuel_consumption_ice(i,k) 'calculate fuel consumption rate',
@@ -44,10 +46,12 @@ equations
          dynamics_speed(i,k) 'dynamics of the speed',
          dynamics_position(i,k) 'lower bound of a vehicle position',
          car_following(i,k) 'car-following model',
-         position_penalty(i,k) 'car-following model';
+         position_penalty(i,k) 'car-following model',
+	 pos_acceleration 'equation to help with relaxing power consumption equation';
 
 *Cost function. A relaxed version of Equation (24). We do not require exact match for the critical points. Instead, we try to minimizze the errors for matching those points.
 cost..                                                                           f =e= sum(k, sum(i, f_inst_ice(i,k))) + sum(k, sum(i, f_inst_ev(i,k))) + sum(k$(k_critical_points(k) ne 0), sum(i, power(s(i,k) - s_critical(i,k), 2)));
+*cost..                                                                           f =e= sum(k$(k_critical_points(k) ne 0), sum(i, power(s(i,k) - s_critical(i,k), 2)));
 *cost..                                                                           f =e= sum(k, sum(i, f_inst_ice(i,k))) + sum(k, sum(i, f_inst_ev(i,k)));
 *Equation (25a)
 dynamics_speed(i,k)$(k_dynamics(k) ne 0)..                                       v(i,k) - v(i,k-1) =e= h*a(i,k-1);
@@ -58,8 +62,11 @@ dynamics_position(i,k)$(k_dynamics(k) ne 0)..                                   
 *A relaxed version of Equation (25c)
 car_following(i,k)$(veh_dynamics(i) ne 0 and k_dynamics(k) ne 0)..               s(i,k) - s(i+1,k) =g= tau*v(i,k);
 
+* Help with power consumption equation relaxation
+pos_acceleration(i,k).. 							 a_plus(i,k) =g= a(i,k);
+
 *Fuel consumption.
-fuel_consumption_ev(i,k)$(veh_ice(i) ne 1)..                                     f_inst_ev(i,k) =e= (1266*a(i,k)*v(i,k) + 1266*9.8*0.006*v(i,k) + 1.3*power(v(i,k),3))/10000;
+fuel_consumption_ev(i,k)$(veh_ice(i) ne 1)..                                     f_inst_ev(i,k) =e= (1266*a_plus(i,k)*v(i,k) + 1266*9.8*0.006*v(i,k) + 1.3*power(v(i,k),3))/1000;
 fuel_consumption_ev_2(i,k)$(veh_ice(i) ne 0)..                                   f_inst_ev(i,k) =e= 0;
 fuel_consumption_ice(i,k)$(veh_ice(i) ne 0)..                                    f_inst_ice(i,k) =e= 0.2736 + 0.0599*v(i,k) + 0.3547*a(i,k) - 0.0058*power(v(i,k),2) + 0.0179*v(i,k)*a(i,k) + 0.0663*power(a(i,k),2) + 0.0002*power(v(i,k),3) + 0.002*power(v(i,k),2)*a(i,k) + 0.0245*v(i,k)*power(a(i,k),2) - 0.0489*power(a(i,k),3);
 fuel_consumption_ice_2(i,k)$(veh_ice(i) ne 1)..                                  f_inst_ice(i,k) =e= 0;
@@ -68,7 +75,7 @@ fuel_consumption_ice_2(i,k)$(veh_ice(i) ne 1)..                                 
 a.up(i,k) = 4;
 a.lo(i,k) = -5;
 v.up(i,k) = 11;
-v.lo(i,k) = -1;
+v.lo(i,k) = 0;
 s.up(i,k) = 700;
 s.lo(i,k) = -200;
 v.fx(i,'1') = v_init(i);
