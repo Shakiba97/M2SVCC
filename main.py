@@ -39,7 +39,9 @@ def main(network_type, volume_type, control_type):
             )
 
         elif control_type == "actuated":
-             env_single_intersection.pedestrian_actuation()
+            for inter_id in network_state.keys():
+                env_single_intersection.pedestrian_actuation(inter_id)
+                ## Apparently the actuation does not get activated (why?)
 
             #env_single_intersection.pedestrian_movement_control()
         env_single_intersection.calculate_extra_metrics()

@@ -16,7 +16,7 @@ def set_common_paras(paras):
     paras["tau_cf"] = 1
     # Safety distance of the car-following model, i.e., d_{0}.
     paras["d_0_cf"] = 7
-    # Discount ratio used to stabalize the MPC problem.
+    # Discount ratio used to stabilize the MPC problem.
     paras["discount_ratio"] = 0.95
     # weighting factor for each mode (for the slower scale problem optimization)(must add up to 1)
     paras["weight(Vehicles/Pedestrians)"] = (0.5, 0.5)
@@ -39,7 +39,7 @@ def set_common_paras(paras):
     # Random seed used to generate the volume.
     paras["random_seed"] = 1
     # simulation duration.
-    paras["simulation_duration"] = 600
+    paras["simulation_duration"] = 900
     # Simulation steps.
     paras["simulation_steps"] = paras["simulation_duration"] // paras["delta_T"]
     # Signal yellow time added between conflicting phases.

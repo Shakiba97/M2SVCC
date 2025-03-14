@@ -39,8 +39,8 @@ class SingleIntersection:
         self.fuel_total_hdv_sumo = 0
         self.phase_list_fix_act =[]
         self.dur_list_fix_act =[]
-        self.greenTimeSofar = 0
-        self.next_time_to_change_to_actuated = 0
+        self.greenTimeSofar = {}
+        self.next_time_to_change_to_actuated = {}
         self.stopped_peds = set()
         ## TODO: generalize self.cross_map needed for Actuation part
         self.cross_map = {':1_c0': 'N', ':1_c2': 'E', ':1_c4': 'S', ':1_c5': 'W', ':1_c3': 'NWSE', ':1_c1': 'NESW'}
@@ -59,8 +59,8 @@ class SingleIntersection:
                         if self.network_graph[inter_id]["crossing"][crossing]["phasing"] == "Straight":
                             self.map_diag[inter_id].setdefault(walkingarea, set())
                             self.map_diag[inter_id][walkingarea].add(crossing)
-        self.cur_phase = None
-        self.previous_phase = None
+        self.cur_phase = {}
+        self.previous_phase = {}
         self.yellow_duration=0
         self.phase_avg = None
         self.phase_ntimes = None
@@ -674,25 +674,27 @@ class SingleIntersection:
         traci.close()
 
 
-    def pedestrian_actuation(self):
+    def pedestrian_actuation(self, inter_id):
         # Only runs in Actuated Scenario
-        self.previous_phase=self.cur_phase
-        self.cur_phase = int(traci.trafficlight.getPhase("1"))
-        if self.cur_phase != self.previous_phase:
-            self.greenTimeSofar = 0
-        logic = traci.trafficlight.getCompleteRedYellowGreenDefinition("1")
+        self.cur_phase.setdefault(inter_id, None)
+        self.previous_phase[inter_id]=self.cur_phase[inter_id]
+        self.cur_phase[inter_id] = int(traci.trafficlight.getPhase(inter_id))
+        if self.cur_phase[inter_id] != self.previous_phase[inter_id]:
+            self.greenTimeSofar.setdefault(inter_id,0)
+            self.greenTimeSofar[inter_id] = 0
+        logic = traci.trafficlight.getCompleteRedYellowGreenDefinition(inter_id)
         Vehicle_Phases = [0, 2, 4, 6]
         ped_demand={}
         Gp=0
         ped_phase_map = {0: ['E', "W"], 2: [], 4: ['N', 'S'], 6: []}
         for d in self.cross_map.keys():
-            ped_demand[self.cross_map[d]] = len(self.network_state[1]['pedestrian_demand_current'][d])
+            ped_demand[self.cross_map[d]] = len(self.network_state[inter_id]['pedestrian_demand_current'][d])
 
-        if self.cur_phase in Vehicle_Phases:
+        if self.cur_phase[inter_id] in Vehicle_Phases:
             for program in logic:
                 if program.programID == "actuated_program":
                     for index, phase in enumerate(program.phases):
-                        if self.cur_phase == index:
+                        if self.cur_phase[inter_id]  == index:
                             #phase.minDur=10
                             min_dur = phase.minDur
                             max_dur = phase.maxDur
@@ -710,48 +712,49 @@ class SingleIntersection:
                             # traci.trafficlight.setCompleteRedYellowGreenDefinition("1", program)
                             break
 
-            self.greenTimeSofar += 0.5
-            if self.next_time_to_change_to_actuated == self.greenTimeSofar:
-                traci.trafficlight.setProgram("1", "actuated_program")
-                traci.trafficlight.setPhase("1", self.cur_phase)
-                ped_demand, current_phase_extension, opposite_phase_delay = self.checkPresentPersons()
-                if not current_phase_extension or self.greenTimeSofar==max_dur: # stop the extensions
-                    traci.trafficlight.setPhase("1", self.cur_phase + 1)
-                self.next_time_to_change_to_actuated = 0
-            ped_demand, current_phase_extension, opposite_phase_delay = self.checkPresentPersons()
+            self.greenTimeSofar[inter_id] += 0.5
+            self.next_time_to_change_to_actuated.setdefault(inter_id, 0)
+            if self.next_time_to_change_to_actuated[inter_id] == self.greenTimeSofar[inter_id]:
+                traci.trafficlight.setProgram(inter_id, "actuated_program")
+                traci.trafficlight.setPhase(inter_id, self.cur_phase[inter_id])
+                ped_demand, current_phase_extension, opposite_phase_delay = self.checkPresentPersons(inter_id)
+                if not current_phase_extension or self.greenTimeSofar[inter_id] == max_dur: # stop the extensions
+                    traci.trafficlight.setPhase(inter_id, self.cur_phase[inter_id] + 1)
+                self.next_time_to_change_to_actuated[inter_id] = 0
+            ped_demand, current_phase_extension, opposite_phase_delay = self.checkPresentPersons(inter_id)
             # if current_phase_extension and self.greenTimeSofar<max_dur and self.greenTimeSofar>=min_dur:
             #     print("current phase needs extension")
             #     print("status of opposite phase delays: ", opposite_phase_delay)
             if current_phase_extension and not opposite_phase_delay:  # if current phase needs extension (gap-based) and the opposite phase does not have too much delay (delay-based)
-                if self.greenTimeSofar<max_dur and self.greenTimeSofar>=min_dur:
+                if self.greenTimeSofar[inter_id]<max_dur and self.greenTimeSofar[inter_id]>=min_dur:
                     # stay at the current green
                     print("current phase needs extension")
-                    if traci.trafficlight.getProgram("1")=="actuated_program":
-                        self.next_time_to_change_to_actuated = min(max_dur, self.greenTimeSofar + 10) # note that here at least 10 seconds (minimum duration) is added to the traffic signal
-                        traci.trafficlight.setProgram("1", "fixed_program")
-                        traci.trafficlight.setPhase("1", self.cur_phase)
+                    if traci.trafficlight.getProgram(inter_id)=="actuated_program":
+                        self.next_time_to_change_to_actuated[inter_id] = min(max_dur, self.greenTimeSofar[inter_id] + 10) # note that here at least 10 seconds (minimum duration) is added to the traffic signal
+                        traci.trafficlight.setProgram(inter_id, "fixed_program")
+                        traci.trafficlight.setPhase(inter_id, self.cur_phase)
 
 
 
-    def checkPresentPersons(self):
+    def checkPresentPersons(self,inter_id):
         current_phase_extension = False
         opposite_phase_delay = False
         ped_demand={0: 0, 2: 0, 4: 0, 6: 0}
         ped_phase_map = {0: ['E', "W"], 2: [], 4: ['N', 'S'], 6: []}
         ## the plan is to extend the phase if there are any pedestrian for the current phase but not if the opposing phase is facing too much pedestrian delay
-        for walking_area in self.walking_areas:
+        for walking_area in self.network_graph[inter_id]["walkingarea"].keys():
             peds=traci.edge.getLastStepPersonIDs(walking_area)
             for ped in peds:
                 next_edge = traci.person.getNextEdge(ped)
-                directions= ped_phase_map[self.cur_phase]
+                directions= ped_phase_map[self.cur_phase[inter_id]]
                 for dir in directions:  # check gap-based extension of current phase
                     if next_edge in self.cross_map.keys() and self.cross_map[next_edge] == dir:
-                        ped_demand[self.cur_phase] += 1
+                        ped_demand[self.cur_phase[inter_id]] += 1
                         current_phase_extension = True
-                opposite_directions = ped_phase_map[(self.cur_phase+4)%8]
+                opposite_directions = ped_phase_map[(self.cur_phase[inter_id]+4)%8]
                 for opposite_dir in opposite_directions: # check delay-based termination according to opposite phase
                     if next_edge in self.cross_map.keys() and self.cross_map[next_edge] == opposite_dir:
-                        ped_demand[(self.cur_phase + 4) % 8] += 1
+                        ped_demand[(self.cur_phase[inter_id] + 4) % 8] += 1
                         if traci.person.getWaitingTime(ped)>=25:  # if the pedestrians on the opposite phase are waiting for at least 15s, don't do the extension
                             #print("delay: ", traci.person.getWaitingTime(ped))
                             opposite_phase_delay = True

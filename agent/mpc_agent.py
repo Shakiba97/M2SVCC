@@ -399,13 +399,16 @@ class MpcAgent:
                                 crossing_width = self.paras["network_graph"][inter_id]["crossing"][cross]["width"]
                                 minimum_green = 3.2 + crossing_length / self.paras['ped_speed'] + 2.7 * ped_demand[cross] / (crossing_width * 3.28)
                                 Gp = max(Gp, minimum_green)
-                        # print("Gp: ", Gp)
-                        self.extension_steps = max(int(Gp / self.delta_T) + 1, 1)
+                        print("Gp: ", Gp)
+                        self.extension_steps = max(int(Gp / self.delta_T)-3, 1)
+                        ## I subtracted by 3 because we are implementing this effect on all-red instead (equivalant to controling the pedestrian behavior and force them too stop when there is not much time left)
+
                         # print("extension steps just calculated: ", self.extension_steps)
                 else:
                     Gp = 0
                     # Gp = min(Gp, 20)
                     # print("ultimate Gp: ", Gp)
+                print("extension steps: ", self.extension_steps)
                 prv_step = self.next_global_step_to_re_solve_the_netwok
                 self.next_global_step_to_re_solve_the_netwok += int(
                     self.delta_T / self.delta_T_faster
@@ -433,12 +436,14 @@ class MpcAgent:
                             Gp = max(Gp, minimum_green)
 
                     #print("Gp: ", Gp)
-                    Gp= 0
-                    self.extension_steps = max(int(Gp / self.delta_T) + 1, 1)
+                    # Gp= 0
+                    self.extension_steps = max(int(Gp / self.delta_T), 1)
+
                     #print("extension steps just calculated: ", self.extension_steps)
                     Gp = 0
                     # Gp = min(Gp, 20)
                     # print("ultimate Gp: ", Gp)
+                print("extension steps: ", self.extension_steps)
                 prv_step = self.next_global_step_to_re_solve_the_netwok
                 self.next_global_step_to_re_solve_the_netwok += int(
                     max(self.delta_T, Gp) / self.delta_T_faster
