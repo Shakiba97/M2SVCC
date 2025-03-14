@@ -1,4 +1,6 @@
 ## The single intersection environment.
+import random
+
 import traci
 import collections
 import os
@@ -9,7 +11,7 @@ import math
 
 from sumolib import checkBinary
 
-from .sumo_network_builder import SumoNetworkBuilder
+from .sumo_network_reader import SumoNetworkReader
 from .sumo_routes_generator import SumoRoutesGenerator
 
 
@@ -17,16 +19,17 @@ class SingleIntersection:
     def __init__(self, paras):
         self.paras = paras
         print("--------Building SUMO network...")
-        network_builder = SumoNetworkBuilder(self.paras)
-        self.paras["neighbors"] = network_builder.build()
+        network_reader = SumoNetworkReader(self.paras)
+        self.network_graph = network_reader.read()
         print("--------SUMO network built.")
 
         print("--------Generating vehicles and routes")
-        routes_generator = SumoRoutesGenerator(self.paras)
+        routes_generator = SumoRoutesGenerator(self.paras)   ## for a generalized case, we assume that the route file is already given to us
+        ## TODO: generalize the route generator
         cav_ids, hdv_ids, veh_id_with_ev = routes_generator.generate_routes_for_single_intersection()
         self.paras["ped_ids"] = set()
-        self.paras["cav_ids"] = cav_ids
-        self.paras["hdv_ids"] = hdv_ids
+        self.paras["cav_ids"] = cav_ids["all"]
+        self.paras["hdv_ids"] = hdv_ids["all"]
         self.paras["veh_id_with_ev"] = veh_id_with_ev
         self.fuel_total_cav_external_model = 0
         self.fuel_total_hdv_external_model = 0
@@ -39,8 +42,23 @@ class SingleIntersection:
         self.greenTimeSofar = 0
         self.next_time_to_change_to_actuated = 0
         self.stopped_peds = set()
+        ## TODO: generalize self.cross_map needed for Actuation part
         self.cross_map = {':1_c0': 'N', ':1_c2': 'E', ':1_c4': 'S', ':1_c5': 'W', ':1_c3': 'NWSE', ':1_c1': 'NESW'}
-        self.walking_areas = [':1_w3', ':1_w2', ':1_w1', ':1_w0']
+        self.map_diag = {}
+        for inter_id in self.network_graph:
+            self.map_diag.setdefault(inter_id, {})
+            if self.paras["ped_phasing"] == "Exclusive":
+                for walkingarea in self.network_graph[inter_id]["walkingarea"]:
+                    for crossing in self.network_graph[inter_id]["walkingarea"][walkingarea]["adjacent"]:
+                        if self.network_graph[inter_id]["crossing"][crossing]["phasing"] == "Diagonal":
+                            self.map_diag[inter_id].setdefault(walkingarea, set())
+                            self.map_diag[inter_id][walkingarea].add(crossing)
+            else:
+                for walkingarea in self.network_graph[inter_id]["walkingarea"]:
+                    for crossing in self.network_graph[inter_id]["walkingarea"][walkingarea]["adjacent"]:
+                        if self.network_graph[inter_id]["crossing"][crossing]["phasing"] == "Straight":
+                            self.map_diag[inter_id].setdefault(walkingarea, set())
+                            self.map_diag[inter_id][walkingarea].add(crossing)
         self.cur_phase = None
         self.previous_phase = None
         self.yellow_duration=0
@@ -51,6 +69,8 @@ class SingleIntersection:
 
     def start_sumo(self, show_gui, control_type, network_type, volume_type):
         penetration = self.paras["penetration"]
+        pedestrian_phasing = self.paras["ped_phasing"]
+
         ## GUI setting.
         if show_gui:
             sumoBinary = checkBinary("sumo-gui")
@@ -64,9 +84,15 @@ class SingleIntersection:
         model_dir = os.path.dirname(os.path.realpath(__file__)) + "/network_model"
         if not os.path.exists(model_dir):
             raise TypeError("Network model is not built yet.")
-        model_file_name = (
-            model_dir + "/" + network_type + "_" + control_type + ".sumocfg"
-        )
+        if control_type != "multi_scale":
+            model_file_name = (
+                model_dir + "/" + network_type + "_" + control_type + ".sumocfg"
+            )
+        else:
+            model_file_name = (
+                model_dir + "/" + network_type + "_" + control_type + "_" + pedestrian_phasing + ".sumocfg"
+            )
+
 
         ## Create folder to store simulation data.
         data_dir = os.path.dirname(os.path.realpath(__file__)) + "/simulation_data"
@@ -121,13 +147,14 @@ class SingleIntersection:
 
     def get_state_cur_intersection(self, cur_step):
         ## Get the parameters needed to get the network state.
-        neighbors = self.paras["neighbors"]
-        traffic_graph = self.paras["traffic_graph"]
+        traffic_graph = self.network_graph
         speed_limit = self.paras["speed_limit"]
         delta_T = self.paras["delta_T"]
         delta_T_faster = self.paras["delta_T_faster"]
         num_predict_steps = self.paras["num_predict_steps"]
         cav_ids = self.paras["cav_ids"]
+
+        ## TODO: right turning conflicts is still hard-coded
         right_turning_vehs=["WS", "SE", "EN", "NW"]
 
         self.network_state = collections.defaultdict()
@@ -139,46 +166,37 @@ class SingleIntersection:
             self.dur_list_fix_act.append(cur_step)
 
             pos_vehicles, speed_vehicles, wt_vehicles, veh_id = [], [], [], []
-            pos_peds, speed_peds, wt_peds, ped_id = [], [], [], []
             arrival_times = []
             num_vehicles_max = 0
             lane_id = []
             lane_length = []
             sidewalk_id=[]
-            cross_demand={}
-            cross_demand_all={}
+            cross_demand_current={}
+            cross_demand_all_steps={}
             delta_T=self.paras["delta_T"]
             delta_T_faster=self.paras["delta_T_faster"]
             num_predict_steps=self.paras["num_predict_steps"]
-            another_map= {':1_c0': 4, ':1_c2': 3, ':1_c4': 2, ':1_c5': 1, ':1_c1': 5, ':1_c3': 6} #CounterClockwise starting from the Westbound
-
-            if self.paras["ped_phasing"] == "Exclusive":
-                map_diag= {':1_w0':[':1_c3'], ':1_w1': [':1_c1'], ':1_w2': [':1_c3'], ':1_w3':[':1_c1']}
-            else:
-                map_diag= {':1_w0':[':1_c0', ':1_c5'], ':1_w1': [':1_c0', ':1_c2'], ':1_w2': [':1_c2',':1_c4'], ':1_w3':[':1_c4', ':1_c5']}
-
-
-            for i in self.cross_map.keys():
-                cross_demand[i]=set()
-                cross_demand_all[another_map[i]] = {1:[], 2:[], 3:[], 4:[], 5:[], 6:[], 7:[]}
-
-            communication_range = traffic_graph[inter_id]["range"]
+            crossing_number_map={}
+            i=1
+            for crossing in self.paras["network_graph"][inter_id]["crossing"]:
+                crossing_number_map[crossing]= i
+                i +=1
+            for cc in self.paras["network_graph"][inter_id]["crossing"]:
+                cross_demand_current[cc] = set()  ## demand on different crossings of the current step
+                for i in range(1, num_predict_steps +2):
+                    cross_demand_all_steps.setdefault(crossing_number_map[cc], {})
+                    cross_demand_all_steps[crossing_number_map[cc]][i]=set()
+            communication_range = self.paras["communication_range"]
             ## Get static information.
-            for direction in ["west", "south", "east", "north"]:
-                node, len_lane, num_lane = neighbors[inter_id][direction]
-                for temp in range(num_lane, 0, -1):
-                    lane_id.append("%i_%i_%i" % (node, inter_id, temp))
-                    lane_length.append(len_lane)
-                for _ in range(int(num_lane/3-1), -1, -1):
-                    sidewalk_id.append("%i_%i" % (node, inter_id))
-            sidewalk_id.extend(self.walking_areas)
+            for lane in traffic_graph[inter_id]["incoming_veh"]:
+                lane_id.append(lane)
+                lane_length.append(traffic_graph[inter_id]["incoming_veh"][lane]["length"])
+            for sidewalk in traffic_graph[inter_id]["incoming_ped"]:
+                sidewalk_id.append(sidewalk)
+            sidewalk_id.extend(list(traffic_graph[inter_id]["walkingarea"]))
 
             ## Get pedestrian info (Pedestrian Demand at current step):
             for i in range(len(sidewalk_id)):
-                pos_peds.append([])
-                speed_peds.append([])
-                wt_peds.append([])
-                ped_id.append([])
                 peds_lane = traci.edge.getLastStepPersonIDs(sidewalk_id[i]) #Get the IDs of the pedestrians on the lane
                 self.paras["ped_ids"] = self.paras["ped_ids"].union(set(peds_lane))
 
@@ -188,41 +206,28 @@ class SingleIntersection:
                     waiting_time=traci.person.getWaitingTime(peds_lane[j])
                     route=traci.person.getEdges(peds_lane[j],)
                     next_edge=traci.person.getNextEdge(peds_lane[j])
-                    current_edge=traci.person.getLaneID(peds_lane[j])[0:5]
-                    pos_peds[i%4].append(pos)
-                    speed_peds[i%4].append(speed)
-                    wt_peds[i%4].append(waiting_time)
-                    ped_id[i%4].append(peds_lane[j])
-                    if next_edge in self.cross_map.keys():
-                        if "diag" in peds_lane[j]:
-                            for cross in map_diag[current_edge]:
-                                cross_demand[cross].add(peds_lane[j])
-                                cross_demand_all[another_map[cross]][1].append(peds_lane[j])
-                        else:
-                            cross_demand[next_edge].add(peds_lane[j])
-                            cross_demand_all[another_map[next_edge]][1].append(peds_lane[j])
-                    elif next_edge in self.walking_areas and speed!=0:
-                        if "diag" in peds_lane[j]:
-                            for cross in map_diag[next_edge]:
-                                for step in range(2, num_predict_steps + 2):
-                                    if (186.4 - pos) / speed <= (step - 1) * delta_T and (186.4 - pos) / speed >= (step - 2) * delta_T:
-                                        cross_demand_all[another_map[cross]][step].append(peds_lane[j])
-                                        traci.person.setColor(peds_lane[j], (255, 0, 0, 255))
-                        else:
-                            crossing = route[2]
-                            for step in range(2, num_predict_steps+2):
-                                if (186.4-pos)/speed <= (step-1)*delta_T and (186.4-pos)/speed >= (step-2)*delta_T:
-                                    cross_demand_all[another_map[crossing]][step].append(peds_lane[j])
-                                    traci.person.setColor(peds_lane[j], (255, 0, 0, 255))
+                    current_edge=sidewalk_id[i]
+
+                    if next_edge in self.paras["network_graph"][inter_id]["crossing"]:
+                        for cross in self.map_diag[inter_id][current_edge]:
+                            cross_demand_current[cross].add(peds_lane[j])
+                            cross_demand_all_steps[crossing_number_map[cross]][1].add(peds_lane[j])
+                    elif next_edge in self.paras["network_graph"][inter_id]["walkingarea"] and speed!=0:
+                        for cross in self.map_diag[inter_id][next_edge]:
+                            for step in range(2, num_predict_steps + 2):
+                                sidewalk_length = self.paras["network_graph"][inter_id]["incoming_ped"][current_edge]["length"]
+                                if (sidewalk_length - pos) / speed <= (step - 1) * delta_T and (sidewalk_length - pos) / speed >= (step - 2) * delta_T:
+                                    cross_demand_all_steps[crossing_number_map[cross]][step].add(peds_lane[j])
+                                    traci.person.setColor(peds_lane[j], (255, 0, 0, 255))   ## TODO: check if this is working correctly later
 
             ## Count the Conflicts between right turning vehicles and pedestrians passing on the crossings:
             all_cars=traci.vehicle.getIDList()
             all_peds=traci.person.getIDList()
             for car in all_cars:
                 for dir in right_turning_vehs:
-                    if car.startswith(dir) and traci.vehicle.getLaneID(car).startswith(":"):
+                    if dir in car and traci.vehicle.getLaneID(car).startswith(":"):
                         for ped in all_peds:
-                            if traci.person.getLaneID(ped) in [key + "_0" for key in self.cross_map.keys()]:
+                            if traci.lane.getEdgeID(traci.person.getLaneID(ped)) in self.paras["network_graph"][inter_id]["crossing"]:
                                 position_car=traci.vehicle.getPosition(car)
                                 position_ped=traci.person.getPosition(ped)
                                 speed_car=traci.vehicle.getSpeed(car)
@@ -242,6 +247,13 @@ class SingleIntersection:
                 cars_lane = traci.lane.getLastStepVehicleIDs(lane_id[i])
 
 
+                # for car in cars_lane:
+                #     if car not in self.paras["cav_ids"].union(self.paras["hdv_ids"]):
+                #         if random.uniform(0,1) <= self.paras["penetration"]:
+                #             self.paras["cav_ids"] = self.paras["cav_ids"].union({car})
+                #         else:
+                #             self.paras["hdv_ids"] = self.paras["hdv_ids"].union({car})
+
                 # Number of vehicles in the current lane and also in the communication range.
                 num_vehicles_lane = 0
                 # Number of HDVs between two CAVs. Will be set to 0 when we find a CAV.
@@ -249,14 +261,13 @@ class SingleIntersection:
                 # HDV ids between two CAVs. Will be set to empty when we find a CAV.
                 current_ids_hdv = []
                 for j in range(len(cars_lane) - 1, -1, -1):
-                    if cars_lane[j] in cav_ids["all"]:
+                    if cars_lane[j] in cav_ids:
                         ## This is a CAV, we need to first check if there are HDVs in front of it.
                         if current_num_hdv == 0:
                             ## There is no HDV between the current CAV and the CAV ahead.
                             if (
                                 lane_length[i]
                                 - traci.vehicle.getLanePosition(cars_lane[j])
-                                - 13
                                 <= communication_range
                             ):
                                 ## The current CAV is within the communication range. Note that the value
@@ -265,7 +276,6 @@ class SingleIntersection:
                                     -(
                                         lane_length[i]
                                         - traci.vehicle.getLanePosition(cars_lane[j])
-                                        - 13
                                     )
                                 )
                                 speed_vehicles[-1].append(
@@ -282,7 +292,6 @@ class SingleIntersection:
                                 temp = (
                                     lane_length[i]
                                     - traci.vehicle.getLanePosition(cars_lane[j])
-                                    - 13
                                     - communication_range
                                 ) / speed_limit
                                 if temp < delta_T * num_predict_steps:
@@ -317,7 +326,6 @@ class SingleIntersection:
                             l_pos = -(
                                 lane_length[i]
                                 - traci.vehicle.getLanePosition(cars_lane[j])
-                                - 13
                             )
                             l_spd = traci.vehicle.getSpeed(cars_lane[j])
                             l_wt = traci.vehicle.getWaitingTime(cars_lane[j])
@@ -420,32 +428,33 @@ class SingleIntersection:
                 "lane_length": lane_length,
                 "lane_id": lane_id,
                 "vehicle_id": veh_id,
-                "pedestrian_demand_current": cross_demand,
-                "pedestrian_demand": cross_demand_all,
+                "pedestrian_demand_current": cross_demand_current,
+                "pedestrian_demand": cross_demand_all_steps,
             }
         return self.network_state
 
     def apply_control_commands(
         self, should_update_signal, next_signal_phase, speed_commands
     ):
-        cur_phase = int(traci.trafficlight.getPhase("1"))
-        ## Signal phase control.
-        if should_update_signal:
-            if next_signal_phase == -1:
-                self.yellow_duration = self.paras["delta_T_faster"]
-                traci.trafficlight.setPhase("1", cur_phase + 9)
-            else:
-                traci.trafficlight.setPhase("1", next_signal_phase)
-                self.yellow_duration = 0
-        elif next_signal_phase == -1:
-            self.yellow_duration += self.paras["delta_T_faster"]
-        if self.yellow_duration == self.paras['yellow_time']:
-            traci.trafficlight.setPhase("1", 17)
-        ## Vehicles control
-        network_vehs=traci.vehicle.getIDList()
-        for veh_id in speed_commands:
-            if veh_id in network_vehs:
-                traci.vehicle.setSpeed(veh_id, speed_commands[veh_id])
+        for inter_id in self.network_graph:
+            cur_phase = int(traci.trafficlight.getPhase(inter_id))
+            ## Signal phase control.
+            if should_update_signal:
+                if next_signal_phase == -1:
+                    self.yellow_duration = self.paras["delta_T_faster"]
+                    traci.trafficlight.setPhase(inter_id, cur_phase + self.network_graph[inter_id]["num_phases"])
+                else:
+                    traci.trafficlight.setPhase(inter_id, next_signal_phase)
+                    self.yellow_duration = 0
+            elif next_signal_phase == -1:
+                self.yellow_duration += self.paras["delta_T_faster"]
+            if self.yellow_duration == self.paras['yellow_time']:
+                traci.trafficlight.setPhase(inter_id, self.paras["all_red_index"])
+            ## Vehicles control
+            network_vehs=traci.vehicle.getIDList()
+            for veh_id in speed_commands:
+                if veh_id in network_vehs:
+                    traci.vehicle.setSpeed(veh_id, speed_commands[veh_id])
 
     def move_one_step_forward(self):
         traci.simulationStep()
@@ -479,7 +488,7 @@ class SingleIntersection:
               self.lost_time_avg_ped)
         print(f"number of right-turn conflicts between vehicles and pedestrians: {right_conflicts}")
         print(f"number of CAVs passing through the specific intersection for {control_type}: ",
-              len(self.paras["cav_ids"]["all"]))
+              len(self.paras["cav_ids"]))
         print(f"number of pedestrians passing through the specific intersection for {control_type}: ",
               len(self.paras["ped_ids"]))
         print(f"The time of simulation termination in {control_type} scenario:",step/2)
@@ -499,7 +508,7 @@ class SingleIntersection:
             file.write(f"average queue length for {control_type} scenario (in m): {self.queue_avg}\n")
             file.write(f"average pedestrian time loss for {control_type} scenario (in s): {self.lost_time_avg_ped}\n")
             file.write(f"number of right-turn conflicts between vehicles and pedestrians: {right_conflicts}\n")
-            file.write(f"number of CAVs passing through the specific intersection in {control_type} scenario: {len(self.paras['cav_ids']['all'])}\n")
+            file.write(f"number of CAVs passing through the specific intersection in {control_type} scenario: {len(self.paras['cav_ids'])}\n")
             file.write(f"number of pedestrians passing through the specific intersection in {control_type} scenario: {len(self.paras['ped_ids'])}\n")
             file.write(f"The time of simulation termination in {control_type} scenario: {step/2}\n")
             file.write(f"average phase lengths:  {self.phase_avg}\n")
@@ -573,8 +582,8 @@ class SingleIntersection:
                 cnt_ped += 1
         #print("wt cnt: ", cnt)
         #print("max wt: ", wt_max)
-        self.waiting_time_avg = wt / len(self.paras["cav_ids"]["all"])
-        self.lost_time_avg = tl / len(self.paras["cav_ids"]["all"])
+        self.waiting_time_avg = wt / cnt
+        self.lost_time_avg = tl / cnt
         self.lost_time_avg_ped = tl_ped / len(self.paras["ped_ids"])
 
     def get_average_queue_length_endtime(self, file):
@@ -593,10 +602,10 @@ class SingleIntersection:
 
     def calculate_extra_metrics(self):
         fuel_cav, fuel_hdv, power_cav, power_hdv = self.get_instant_fuel_external_model()
-        print("fuel_cav", fuel_cav)
-        print("fuel_hdv", fuel_hdv)
-        print("power_cav", power_cav)
-        print("power_hdv", power_hdv)
+        # print("fuel_cav", fuel_cav)
+        # print("fuel_hdv", fuel_hdv)
+        # print("power_cav", power_cav)
+        # print("power_hdv", power_hdv)
         self.fuel_total_cav_external_model += fuel_cav
         self.fuel_total_hdv_external_model += fuel_hdv
         self.power_total_cav_external_model += power_cav
@@ -611,12 +620,10 @@ class SingleIntersection:
         fuel_hdv = 0
         power_cav = 0
         power_hdv = 0
-        for inter_id in self.paras["traffic_graph"]:
+        for inter_id in self.paras["network_graph"]:
             lane_id = []
-            for direction in ["west", "south", "east", "north"]:
-                node, len_lane, num_lane = self.paras["neighbors"][inter_id][direction]
-                for temp in range(num_lane, 0, -1):
-                    lane_id.append("%i_%i_%i" % (node, inter_id, temp))
+            for lane in self.paras["network_graph"][inter_id]["incoming_veh"]:
+                lane_id.append(lane)
             for i in range(len(lane_id)):
                 cars_lane = traci.lane.getLastStepVehicleIDs(lane_id[i])
                 for j in range(len(cars_lane) - 1, -1, -1):
@@ -649,17 +656,15 @@ class SingleIntersection:
     def get_instant_fuel_sumo(self):
         fuel_cav = 0
         fuel_hdv = 0
-        for inter_id in self.paras["traffic_graph"]:
+        for inter_id in self.paras["network_graph"]:
             lane_id = []
-            for direction in ["west", "south", "east", "north"]:
-                node, len_lane, num_lane = self.paras["neighbors"][inter_id][direction]
-                for temp in range(num_lane, 0, -1):
-                    lane_id.append("%i_%i_%i" % (node, inter_id, temp))
+            for lane in self.paras["network_graph"][inter_id]["incoming_veh"]:
+                lane_id.append(lane)
             for i in range(len(lane_id)):
                 cars_lane = traci.lane.getLastStepVehicleIDs(lane_id[i])
                 for j in range(len(cars_lane) - 1, -1, -1):
                     fuel_temp = traci.vehicle.getFuelConsumption(cars_lane[j])
-                    if cars_lane[j] in self.paras["cav_ids"]["all"]:
+                    if cars_lane[j] in self.paras["cav_ids"]:
                         fuel_cav += fuel_temp
                     else:
                         fuel_hdv += fuel_temp
