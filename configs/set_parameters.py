@@ -67,7 +67,7 @@ def set_common_paras(paras):
     # Ratio of Electric Vehicles (between 0 and 1)
     paras["ratio_ev"] = 0
     # Poisson gamma for pedestrian demand
-    paras["poisson_gamma_pedestrian"] = 0.04  # high:0.08 medium=0.04 low=0.01
+    paras["poisson_gamma_pedestrian"] = 0.08 # high:0.08 medium=0.04 low=0.01
     paras["ped_demand_symmetry"] = "Asymmetric" # Asymmetric or Symmetric pedestrian demand
 
     ## pedestrian parameters:

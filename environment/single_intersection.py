@@ -492,10 +492,21 @@ class SingleIntersection:
         print(f"number of pedestrians passing through the specific intersection for {control_type}: ",
               len(self.paras["ped_ids"]))
         print(f"The time of simulation termination in {control_type} scenario:",step/2)
-        if control_type == "multi_scale":
-            file_name = f"Results/Metrics_Results_{control_type}_scenario_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}.txt"
+
+
+        if self.paras["poisson_gamma_pedestrian"] == 0.01:
+            a = "LowPed"
+        elif self.paras["poisson_gamma_pedestrian"] == 0.04:
+            a = "MedPed"
+        elif self.paras["poisson_gamma_pedestrian"] == 0.08:
+            a = "HighPed"
         else:
-            file_name = f"Results/Metrics_Results_{control_type}_scenario_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]}).txt"
+            raise
+
+        if control_type == "multi_scale":
+            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["weight(Vehicles/Pedestrians)"]}_{a}.txt"
+        else:
+            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["weight(Vehicles/Pedestrians)"]}_{a}.txt"
         with open(file_name, 'w') as file:
             file.write(f"average fuel consumption (external model) for CAVs {control_type} (in mg): {self.fuel_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ice"]),1)}\n")
             file.write(f"average fuel consumption (external model) for HDVs {control_type} (in mg): {self.fuel_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ice"]),1)}\n")
@@ -732,7 +743,7 @@ class SingleIntersection:
                     if traci.trafficlight.getProgram(inter_id)=="actuated_program":
                         self.next_time_to_change_to_actuated[inter_id] = min(max_dur, self.greenTimeSofar[inter_id] + 10) # note that here at least 10 seconds (minimum duration) is added to the traffic signal
                         traci.trafficlight.setProgram(inter_id, "fixed_program")
-                        traci.trafficlight.setPhase(inter_id, self.cur_phase)
+                        traci.trafficlight.setPhase(inter_id, self.cur_phase[inter_id])
 
 
 
