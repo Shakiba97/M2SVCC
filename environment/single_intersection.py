@@ -173,9 +173,6 @@ class SingleIntersection:
             sidewalk_id=[]
             cross_demand_current={}
             cross_demand_all_steps={}
-            delta_T=self.paras["delta_T"]
-            delta_T_faster=self.paras["delta_T_faster"]
-            num_predict_steps=self.paras["num_predict_steps"]
             crossing_number_map={}
             i=1
             for crossing in self.paras["network_graph"][inter_id]["crossing"]:
@@ -206,19 +203,32 @@ class SingleIntersection:
                     waiting_time=traci.person.getWaitingTime(peds_lane[j])
                     route=traci.person.getEdges(peds_lane[j],)
                     next_edge=traci.person.getNextEdge(peds_lane[j])
+                    next_next_edge = None
                     current_edge=sidewalk_id[i]
-
                     if next_edge in self.paras["network_graph"][inter_id]["crossing"]:
-                        for cross in self.map_diag[inter_id][current_edge]:
-                            cross_demand_current[cross].add(peds_lane[j])
-                            cross_demand_all_steps[crossing_number_map[cross]][1].add(peds_lane[j])
-                    elif next_edge in self.paras["network_graph"][inter_id]["walkingarea"] and speed!=0:
+                        if next_edge in self.map_diag[inter_id][current_edge]:
+                            cross_demand_current[next_edge].add(peds_lane[j])
+                            cross_demand_all_steps[crossing_number_map[next_edge]][1].add(peds_lane[j])
+                        else:
+                            for cross in self.map_diag[inter_id][current_edge]:
+                                cross_demand_current[cross].add(peds_lane[j])
+                                cross_demand_all_steps[crossing_number_map[cross]][1].add(peds_lane[j])
+                    if next_edge in self.paras["network_graph"][inter_id]["walkingarea"] and speed!=0:
                         for cross in self.map_diag[inter_id][next_edge]:
-                            for step in range(2, num_predict_steps + 2):
-                                sidewalk_length = self.paras["network_graph"][inter_id]["incoming_ped"][current_edge]["length"]
-                                if (sidewalk_length - pos) / speed <= (step - 1) * delta_T and (sidewalk_length - pos) / speed >= (step - 2) * delta_T:
-                                    cross_demand_all_steps[crossing_number_map[cross]][step].add(peds_lane[j])
-                                    traci.person.setColor(peds_lane[j], (255, 0, 0, 255))   ## TODO: check if this is working correctly later
+                            if cross in route:
+                                next_next_edge = cross
+                                for step in range(2, num_predict_steps + 2):
+                                    sidewalk_length = self.paras["network_graph"][inter_id]["incoming_ped"][current_edge]["length"]
+                                    if (sidewalk_length - pos) / speed <= (step - 1) * delta_T and (sidewalk_length - pos) / speed >= (step - 2) * delta_T:
+                                        cross_demand_all_steps[crossing_number_map[next_next_edge]][step].add(peds_lane[j])
+                                        traci.person.setColor(peds_lane[j], (255, 0, 0, 255))
+                        if not next_next_edge:
+                            for cross in self.map_diag[inter_id][next_edge]:
+                                for step in range(2, num_predict_steps + 2):
+                                    sidewalk_length = self.paras["network_graph"][inter_id]["incoming_ped"][current_edge]["length"]
+                                    if (sidewalk_length - pos) / speed <= (step - 1) * delta_T and (sidewalk_length - pos) / speed >= (step - 2) * delta_T:
+                                        cross_demand_all_steps[crossing_number_map[cross]][step].add(peds_lane[j])
+                                        traci.person.setColor(peds_lane[j], (255, 0, 0, 255))
 
             ## Count the Conflicts between right turning vehicles and pedestrians passing on the crossings:
             all_cars=traci.vehicle.getIDList()
@@ -387,7 +397,6 @@ class SingleIntersection:
                     l_pos = -(
                         lane_length[i]
                         - traci.vehicle.getLanePosition(cars_lane[0])
-                        - 13
                     )
                     l_spd = traci.vehicle.getSpeed(cars_lane[0])
                     l_wt = traci.vehicle.getWaitingTime(cars_lane[0])
@@ -653,15 +662,15 @@ class SingleIntersection:
                         - 0.0489 * acc**3
                     )
                     power_temp_temp = (1266 * speed * acc + 1266 * 9.8 * 0.006 * speed + 1.3 * speed ** 3) / 1000
-                    power_temp = power_temp_temp if power_temp_temp > 0 else 0.9 * power_temp_temp
+                    # power_temp = power_temp_temp if power_temp_temp > 0 else 0.9 * power_temp_temp
                     if cars_lane[j] in self.paras["veh_id_with_ev"]['cav_ice']:
                         fuel_cav += fuel_temp
                     elif cars_lane[j] in self.paras["veh_id_with_ev"]["hdv_ice"]:
                         fuel_hdv += fuel_temp
                     elif cars_lane[j] in self.paras["veh_id_with_ev"]["cav_ev"]:
-                        power_cav += power_temp
+                        power_cav += power_temp_temp
                     elif cars_lane[j] in self.paras["veh_id_with_ev"]["hdv_ev"]:
-                        power_hdv += power_temp
+                        power_hdv += power_temp_temp
         return fuel_cav, fuel_hdv, power_cav, power_hdv
 
     def get_instant_fuel_sumo(self):

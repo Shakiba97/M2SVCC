@@ -1,6 +1,6 @@
 *option nlp=SCIP;
-*option nlp=IPOPT;
-option nlp=CONOPT;
+option nlp=IPOPT;
+*option nlp=CONOPT;
 
 parameter
          model_status,
@@ -66,7 +66,7 @@ car_following(i,k)$(veh_dynamics(i) ne 0 and k_dynamics(k) ne 0)..              
 pos_acceleration(i,k).. 							 a_plus(i,k) =g= a(i,k);
 
 *Fuel consumption.
-fuel_consumption_ev(i,k)$(veh_ice(i) ne 1)..                                     f_inst_ev(i,k) =e= (1266*a_plus(i,k)*v(i,k) + 1266*9.8*0.006*v(i,k) + 1.3*power(v(i,k),3))/1000;
+fuel_consumption_ev(i,k)$(veh_ice(i) ne 1)..                                     f_inst_ev(i,k) =e= (1266*a_plus(i,k)*v(i,k) + 1266*9.8*0.006*v(i,k) + 1.3*power(v(i,k),3)-0.8 * (log(1 + exp(-10 * a(i,k))) / 10) * v(i,k))/10000;
 fuel_consumption_ev_2(i,k)$(veh_ice(i) ne 0)..                                   f_inst_ev(i,k) =e= 0;
 fuel_consumption_ice(i,k)$(veh_ice(i) ne 0)..                                    f_inst_ice(i,k) =e= 0.2736 + 0.0599*v(i,k) + 0.3547*a(i,k) - 0.0058*power(v(i,k),2) + 0.0179*v(i,k)*a(i,k) + 0.0663*power(a(i,k),2) + 0.0002*power(v(i,k),3) + 0.002*power(v(i,k),2)*a(i,k) + 0.0245*v(i,k)*power(a(i,k),2) - 0.0489*power(a(i,k),3);
 fuel_consumption_ice_2(i,k)$(veh_ice(i) ne 1)..                                  f_inst_ice(i,k) =e= 0;

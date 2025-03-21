@@ -340,9 +340,9 @@ class MpcAgent:
         #                         sum(self.f_delay)/len(self.f_delay)/50)
         # print("pedestrian Cost: ",  sum(self.f_ped_throughput)/len(self.f_ped_throughput)*5)
         # print("Mean of ped times veh values: ", sum(self.ped_times_veh)/len(self.ped_times_veh))
-        # print("Vehicle cost at this point: ", self.f_throughput[-1]+self.f_dist[-1]/100+self.f_transit[-1]*5+self.f_delay[-1]/50)
-        # print("Pedestrian cost at this point: ", self.f_ped_throughput[-1]*5/5)
-        # print("objective function at this point:", self.f[-1])
+        print("Vehicle cost at this point: ", self.f_throughput[-1]+self.f_dist[-1]/100+self.f_transit[-1]*5+self.f_delay[-1]/50)
+        print("Pedestrian cost at this point: ", self.f_ped_throughput[-1]*5/40)
+        print("objective function at this point:", self.f[-1])
 
         for rec in self.model_slower.out_db["p"]:
             p_gams[int(rec.key(0)) - 1].append(round(rec.level))
@@ -418,7 +418,6 @@ class MpcAgent:
                 Gp = 0
                 next = following_phases[0]
                 after_next = following_phases[1]
-                two_after_next = following_phases[2]
 
                 self.extension_steps = max(1, self.extension_steps - 1)
                 if self.extension_steps > 1:
@@ -434,7 +433,6 @@ class MpcAgent:
                             crossing_width = self.paras["network_graph"][inter_id]["crossing"][cross]["width"]
                             minimum_green = 3.2 + crossing_length / self.paras['ped_speed'] + 2.7 * ped_demand[cross] / (crossing_width * 3.28)
                             Gp = max(Gp, minimum_green)
-
                     #print("Gp: ", Gp)
                     # Gp= 0
                     self.extension_steps = max(int(Gp / self.delta_T), 1)
