@@ -330,8 +330,10 @@ class MpcAgent:
             self.f_ped_throughput.append(item.level)
         #print("f_ped_throughput: ", sum(self.f_ped_throughput)/len(self.f_ped_throughput))
         #
-        # Vehicle_cost=sum(self.f_throughput)/len(self.f_throughput) + sum(self.f_dist)/len(self.f_dist)/100 + sum(self.f_transit)/len(self.f_transit)*5 + sum(self.f_delay)/len(self.f_delay)/50
-        # Pedestrian_cost=sum(self.f_ped_throughput)/len(self.f_ped_throughput)*5
+        Vehicle_cost=sum(self.f_throughput)/len(self.f_throughput) + sum(self.f_dist)/len(self.f_dist)/100 + sum(self.f_transit)/len(self.f_transit)*5 + sum(self.f_delay)/len(self.f_delay)/50
+        Pedestrian_cost=sum(self.f_ped_throughput)/len(self.f_ped_throughput)*5
+        print(Vehicle_cost)
+        print(Pedestrian_cost)
         #
         # self.ped_times_veh.append(Pedestrian_cost/Vehicle_cost)
         # print("Vehicle Cost: ", sum(self.f_throughput)/len(self.f_throughput) +
@@ -341,7 +343,7 @@ class MpcAgent:
         # print("pedestrian Cost: ",  sum(self.f_ped_throughput)/len(self.f_ped_throughput)*5)
         # print("Mean of ped times veh values: ", sum(self.ped_times_veh)/len(self.ped_times_veh))
         print("Vehicle cost at this point: ", self.f_throughput[-1]+self.f_dist[-1]/100+self.f_transit[-1]*5+self.f_delay[-1]/50)
-        print("Pedestrian cost at this point: ", self.f_ped_throughput[-1]*5/40)
+        print("Pedestrian cost at this point: ", self.f_ped_throughput[-1]*5)
         print("objective function at this point:", self.f[-1])
 
         for rec in self.model_slower.out_db["p"]:
@@ -368,7 +370,7 @@ class MpcAgent:
                     if self.paras["network_graph"][inter_id]["crossing"][cross]["phasing"]=="Diagonal":
                         crossing_length = self.paras["network_graph"][inter_id]["crossing"][cross]["length"]
                         all_red_clearance= int(crossing_length/self.paras['ped_speed'])
-                all_red_clearance=15
+                all_red_clearance=20
                 self.next_global_step_to_re_solve_the_netwok += int(
                     all_red_clearance / self.delta_T_faster
                 )
@@ -400,8 +402,8 @@ class MpcAgent:
                                 minimum_green = 3.2 + crossing_length / self.paras['ped_speed'] + 2.7 * ped_demand[cross] / (crossing_width * 3.28)
                                 Gp = max(Gp, minimum_green)
                         print("Gp: ", Gp)
-                        self.extension_steps = max(int(Gp / self.delta_T)-3, 1)
-                        ## I subtracted by 3 because we are implementing this effect on all-red instead (equivalant to controling the pedestrian behavior and force them too stop when there is not much time left)
+                        self.extension_steps = max(int(Gp / self.delta_T)-4, 1)
+                        ## I subtracted by 4 because we are implementing this effect on all-red instead (equivalant to controling the pedestrian behavior and force them too stop when there is not much time left)
 
                         # print("extension steps just calculated: ", self.extension_steps)
                 else:

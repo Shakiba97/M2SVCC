@@ -57,3 +57,4 @@ def main(network_type, volume_type, control_type):
 if __name__ == "__main__":
     main("single_intersection", "symmetric", "multi_scale")
     # control_type: "multi_scale", "actuated", "fixed_time"
+    # volume_type: symmetric, asymmetric

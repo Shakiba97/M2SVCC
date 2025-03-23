@@ -7,7 +7,7 @@ def set_common_paras(paras):
     # Prediction horizon of the MPC problem, i.e., T^{s}.
     paras["num_predict_steps"] = 6
     # Number of slower steps used to construct the faster scale problem, i.e., h in Equation (24).
-    paras["faster_steps_from_slower"] = 3
+    paras["faster_steps_from_slower"] = 4
     # Length of each slower step, i.e., \Delta T_{s}.
     paras["delta_T"] = 5
     # Length of each faster step, i.e., \Delta T_{f}.
