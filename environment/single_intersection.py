@@ -447,7 +447,8 @@ class SingleIntersection:
     ):
         for inter_id in self.network_graph:
             cur_phase = int(traci.trafficlight.getPhase(inter_id))
-            ## Signal phase control.
+
+            # Signal phase control
             if should_update_signal:
                 if next_signal_phase == -1:
                     self.yellow_duration = self.paras["delta_T_faster"]
@@ -457,13 +458,16 @@ class SingleIntersection:
                     self.yellow_duration = 0
             elif next_signal_phase == -1:
                 self.yellow_duration += self.paras["delta_T_faster"]
-            if self.yellow_duration == self.paras['yellow_time']:
+
+            if self.yellow_duration == self.paras["yellow_time"]:
                 traci.trafficlight.setPhase(inter_id, self.paras["all_red_index"])
-            ## Vehicles control
-            network_vehs=traci.vehicle.getIDList()
+
+            # Vehicles control
+            network_vehs = traci.vehicle.getIDList()
             for veh_id in speed_commands:
                 if veh_id in network_vehs:
                     traci.vehicle.setSpeed(veh_id, speed_commands[veh_id])
+
 
     def move_one_step_forward(self):
         traci.simulationStep()
