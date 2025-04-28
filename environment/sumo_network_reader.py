@@ -9,11 +9,13 @@ class SumoNetworkReader:
         self.paras["network_graph"] = self.network_graph
     def read(self):
         data_dir = os.path.dirname(os.path.realpath(__file__)) + "/network_model/"
-        network_file = (data_dir + "single_intersection_pedestrian_X.net.xml")
+        network_file = (data_dir + "single_intersection_bike.net.xml")
         if self.paras["ped_phasing"] == "Concurrent":
             signal_file = (data_dir + "single_intersection_Concurrent.add.xml")
         elif self.paras["ped_phasing"] == "Exclusive":
             signal_file = (data_dir + "single_intersection_Exclusive.add.xml")
+        elif self.paras["ped_phasing"] == "Hybrid":
+            signal_file = (data_dir + "single_intersection_Hybrid.add.xml")
         tree = ET.parse(network_file)
         root = tree.getroot()
 
@@ -32,12 +34,13 @@ class SumoNetworkReader:
                         self.network_graph[inter_id].setdefault("neighbors", set())
                         self.network_graph[inter_id]["neighbors"].add(element.attrib["from"])
                         for lane in element.findall("lane"):
-                            if "allow" in lane.attrib and "pedestrian" in lane.attrib["allow"]:  #this is a sidewalk
-                                self.network_graph[inter_id].setdefault("incoming_ped", {})
-                                self.network_graph[inter_id]["incoming_ped"][element.attrib["id"]] = {"length": float(lane.attrib["length"])}
-                            elif "disallow" in lane.attrib and "pedestrian" in lane.attrib["disallow"]:  # what if bike lane?
-                                self.network_graph[inter_id].setdefault("incoming_veh", {})
-                                self.network_graph[inter_id]["incoming_veh"][lane.attrib["id"]] = {"length": float(lane.attrib["length"])}
+                            if "allow" in lane.attrib:
+                                if "pedestrian" in lane.attrib["allow"]:  #this is a sidewalk
+                                    self.network_graph[inter_id].setdefault("incoming_ped", {})
+                                    self.network_graph[inter_id]["incoming_ped"][element.attrib["id"]] = {"length": float(lane.attrib["length"])}
+                                elif "bicycle" in lane.attrib["allow"]:  # this is a bike lane
+                                    self.network_graph[inter_id].setdefault("incoming_bike", {})
+                                    self.network_graph[inter_id]["incoming_bike"][lane.attrib["id"]] = {"length": float(lane.attrib["length"])}
                             else:
                                 self.network_graph[inter_id].setdefault("incoming_veh", {})
                                 self.network_graph[inter_id]["incoming_veh"][lane.attrib["id"]] = {"length": float(lane.attrib["length"])}
@@ -45,13 +48,14 @@ class SumoNetworkReader:
                     elif element.attrib["from"] in self.network_graph.keys():
                         inter_id = element.attrib["from"]
                         for lane in element.findall("lane"):
-                            if "allow" in lane.attrib and "pedestrian" in lane.attrib["allow"]:  #this is a sidewalk
-                                self.network_graph[inter_id].setdefault("outgoing_ped", {})
-                                self.network_graph[inter_id]["outgoing_ped"][element.attrib["id"]] = {
-                                    "length": float(lane.attrib["length"])}
-                            elif "disallow" in lane.attrib and "pedestrian" in lane.attrib["disallow"] : # what if bike lane?
-                                self.network_graph[inter_id].setdefault("outgoing_veh", {})
-                                self.network_graph[inter_id]["outgoing_veh"][lane.attrib["id"]] = {"length": float(lane.attrib["length"])}
+                            if "allow" in lane.attrib:
+                                if "pedestrian" in lane.attrib["allow"]:  #this is a sidewalk
+                                    self.network_graph[inter_id].setdefault("outgoing_ped", {})
+                                    self.network_graph[inter_id]["outgoing_ped"][element.attrib["id"]] = {
+                                        "length": float(lane.attrib["length"])}
+                                elif "bicycle" in lane.attrib["allow"]:
+                                    self.network_graph[inter_id].setdefault("outgoing_bike", {})
+                                    self.network_graph[inter_id]["outgoing_bike"][lane.attrib["id"]] = {"length": float(lane.attrib["length"])}
                             else:
                                 self.network_graph[inter_id].setdefault("outgoing_veh", {})
                                 self.network_graph[inter_id]["outgoing_veh"][lane.attrib["id"]] = {"length": float(lane.attrib["length"])}

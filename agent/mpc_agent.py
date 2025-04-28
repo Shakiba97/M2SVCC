@@ -35,9 +35,11 @@ class MpcAgent:
         #self.ws = GamsWorkspace(self.models_dir, system_directory=gams_dir, debug=1)
         self.ws = GamsWorkspace(self.models_dir, debug=1)
         if paras["ped_phasing"] == "Concurrent":
-            self.gams_file_slower = (self.models_dir + "/" + intersection_type + "_slower_Pedestrians.gms")
+            self.gams_file_slower = (self.models_dir + "/" + intersection_type + "_slower_Bikes.gms")
         elif paras["ped_phasing"] == "Exclusive":
-            self.gams_file_slower = (self.models_dir + "/" + intersection_type + "_slower_Pedestrians (Exclusive).gms")
+            self.gams_file_slower = (self.models_dir + "/" + intersection_type + "_slower_Bikes (Exclusive).gms")
+        elif paras["ped_phasing"] == "Hybrid":
+            self.gams_file_slower = (self.models_dir + "/" + intersection_type + "_slower_Bikes (Hybrid).gms")
         self.gams_file_faster = (
             self.models_dir + "/" + intersection_type + "_faster.gms"
         )
@@ -70,6 +72,7 @@ class MpcAgent:
         self.f_transit=[]
         self.f_delay=[]
         self.f_ped_throughput=[]
+        self.f_bike_throughput=[]
         self.extension_steps=1
         self.is_extended = False
         self.ped_times_veh=[]
@@ -144,10 +147,11 @@ class MpcAgent:
         self.max_acc = paras["max_acc"]
         self.comf_acc = paras["comf_acc"]
         self.delta_idm = paras["delta_idm"]
-        self.vehicle_length = paras["vehicle_length"]
+        self.vehicle_length = paras["length"]
 
         #self.cross_map = {':1_c0': 'N', ':1_c2': 'E', ':1_c4': 'S', ':1_c5': 'W', ':1_c3': 'NWSE', ':1_c1': 'NESW'}
         self.num_cross=len(paras["network_graph"][inter_id]["crossing"].keys())
+        self.num_bikelane=len(paras["network_graph"][inter_id]["incoming_bike"].keys())
 
     def set_slower_scale_constant_paras_single_intersection(self):
         """Set the constant parameters of the slower scale model"""
@@ -167,6 +171,10 @@ class MpcAgent:
         m = self.db_slower.add_set("m", 1, 'crossings')
         for ind in range(1, self.num_cross + 1):
             m.add_record(str(ind))
+
+        n = self.db_slower.add_set("n", 1, 'bike lanes')
+        for ind in range(1, self.num_bikelane + 1):
+            n.add_record(str(ind))
 
         h = self.db_slower.add_parameter(
             "h", 0, "length of the time interval, i.e., the step size"
@@ -210,14 +218,18 @@ class MpcAgent:
         j = self.db_slower.get_set("j")
         l = self.db_slower.get_set("l")
         m = self.db_slower.get_set("m")
+        n = self.db_slower.get_set("n")
         k= self.db_slower.get_set("k")
 
         pos_vehicles = intersection_state["pos_vehicles"]
+        veh_len = intersection_state["vehicle_length"]
+        minG = intersection_state["minGap"]
         wt_vehicles = intersection_state["wt_vehicles"]
         cur_phase = intersection_state["signal_phase"]
         num_vehicles_max = intersection_state["num_vehicles_max"]
         pedestrian_demand=intersection_state["pedestrian_demand"]
-        weights= self.paras["weight(Vehicles/Pedestrians)"]
+        bicycle_demand=intersection_state["bike_demand"]
+        weights= self.paras["weight(Vehicles/Pedestrians/Bikes)"]
 
         i = self.db_slower.add_set("i", 1, "vehicles")
         for ind in range(1, num_vehicles_max + 1):
@@ -228,6 +240,9 @@ class MpcAgent:
             2,
             "indicators showing that whether there is a vehicle i at lane j",
         )
+        vehicle_length = self.db_slower.add_parameter_dc("vehicle_length", [i, j], "length of vehicle (bike or passenger car)")
+        minGap = self.db_slower.add_parameter_dc("minGap", [i, j], "minimum gap between current and leading (bike=0.5, car=2)")
+
         s_init = self.db_slower.add_parameter_dc(
             "s_init", [i, j], "initial position of vehicle i at lane j"
         )
@@ -241,6 +256,7 @@ class MpcAgent:
             "indicator of vehicles to calculate the car-following distances",
         )
         ped_Demand = self.db_slower.add_parameter_dc("ped_Demand", [m, k], "Pedestrian demand for each crossing m for the next k steps of prediction horizon")
+        bike_Demand = self.db_slower.add_parameter_dc("bike_Demand", [n, k], "Bike demand for each bike pass n for the next k steps of prediction horizon")
 
         extension_steps = self.db_slower.add_parameter(
             "Gp", 0, "length of the time interval, i.e., the step size"
@@ -253,10 +269,15 @@ class MpcAgent:
         ped_weight = self.db_slower.add_parameter(
             "Wp", 0, "Weighting factor for Pedestrians"
         )
+        bike_weight = self.db_slower.add_parameter(
+            "Wb", 0, "Weighting factor for Bikes"
+        )
 
         for ind_lane in range(len(pos_vehicles)):
             for ind_vehicle in range(len(pos_vehicles[ind_lane])):
                 vehicle_indi.add_record((str(ind_vehicle + 1), str(ind_lane + 1)))
+                vehicle_length.add_record((str(ind_vehicle + 1), str(ind_lane + 1))).value = (veh_len[ind_lane][ind_vehicle])
+                minGap.add_record((str(ind_vehicle + 1), str(ind_lane + 1))).value = (minG[ind_lane][ind_vehicle])
                 s_init.add_record((str(ind_vehicle + 1), str(ind_lane + 1))).value = (
                     pos_vehicles[ind_lane][ind_vehicle]
                 )
@@ -280,8 +301,15 @@ class MpcAgent:
                 cum+=len(pedestrian_demand[ind_cross+1][ind_step])
                 ped_Demand.add_record((str(ind_cross+1),str(ind_step))).value = cum ## the current demand should be considered for the q(m, 3) which is the phase after the current phase
 
+        for ind_bl in range(self.num_bikelane):
+            cum=0
+            for ind_step in range(1, self.num_steps+2):
+                cum+=len(bicycle_demand[ind_bl+1][ind_step])
+                bike_Demand.add_record((str(ind_bl+1),str(ind_step))).value=cum
+
         veh_weight.add_record().value = weights[0]
         ped_weight.add_record().value = weights[1]
+        bike_weight.add_record().value = weights[2]
 
 
     def run_gams_to_solve_slower_scale_problem_single_intersection(self):
@@ -329,11 +357,13 @@ class MpcAgent:
         for item in self.model_slower.out_db["f_ped_throughput"]:
             self.f_ped_throughput.append(item.level)
         #print("f_ped_throughput: ", sum(self.f_ped_throughput)/len(self.f_ped_throughput))
+        for item in self.model_slower.out_db["f_bike_throughput"]:
+            self.f_bike_throughput.append(item.level)
         #
-        Vehicle_cost=sum(self.f_throughput)/len(self.f_throughput) + sum(self.f_dist)/len(self.f_dist)/100 + sum(self.f_transit)/len(self.f_transit)*5 + sum(self.f_delay)/len(self.f_delay)/50
-        Pedestrian_cost=sum(self.f_ped_throughput)/len(self.f_ped_throughput)*5
-        print(Vehicle_cost)
-        print(Pedestrian_cost)
+        # Vehicle_cost=sum(self.f_throughput)/len(self.f_throughput) + sum(self.f_dist)/len(self.f_dist)/100 + sum(self.f_transit)/len(self.f_transit)*5 + sum(self.f_delay)/len(self.f_delay)/50
+        # Pedestrian_cost=sum(self.f_ped_throughput)/len(self.f_ped_throughput)*5
+        # print(Vehicle_cost)
+        # print(Pedestrian_cost)
         #
         # self.ped_times_veh.append(Pedestrian_cost/Vehicle_cost)
         # print("Vehicle Cost: ", sum(self.f_throughput)/len(self.f_throughput) +
@@ -342,9 +372,9 @@ class MpcAgent:
         #                         sum(self.f_delay)/len(self.f_delay)/50)
         # print("pedestrian Cost: ",  sum(self.f_ped_throughput)/len(self.f_ped_throughput)*5)
         # print("Mean of ped times veh values: ", sum(self.ped_times_veh)/len(self.ped_times_veh))
-        print("Vehicle cost at this point: ", self.f_throughput[-1]+self.f_dist[-1]/100+self.f_transit[-1]*5+self.f_delay[-1]/50)
-        print("Pedestrian cost at this point: ", self.f_ped_throughput[-1]*5)
-        print("objective function at this point:", self.f[-1])
+        # print("Vehicle cost at this point: ", self.f_throughput[-1]+self.f_dist[-1]/100+self.f_transit[-1]*5+self.f_delay[-1]/50)
+        # print("Pedestrian cost at this point: ", self.f_ped_throughput[-1]*5)
+        # print("objective function at this point:", self.f[-1])
 
         for rec in self.model_slower.out_db["p"]:
             p_gams[int(rec.key(0)) - 1].append(round(rec.level))
@@ -705,9 +735,14 @@ class MpcAgent:
         speed_commands = {}
         for inter_id in network_state:
             if network_state[inter_id]["num_vehicles_max"] > 0:
+                vehicle_types = network_state[inter_id]["vehicle_types"]
                 for j in range(network_state[inter_id]["num_lane"]):
                     for k in range(len(v_vehicles_faster[j])):
                         veh_id = vehicle_ids[j][k]
+                        if "bike" in veh_id:
+                            type = "Bike"
+                        else:
+                            type = "Car"
                         if veh_id not in all_vehicles:
                             continue
                         if veh_id in self.network_cav_ids:
@@ -723,13 +758,15 @@ class MpcAgent:
                                     pos_fv = -(
                                         network_state[inter_id]["lane_length"][j]
                                         - traci.vehicle.getLanePosition(front_veh_id)
-                                        - 13
                                     )
+                                    if "bike" in front_veh_id:
+                                        length_fv = self.vehicle_length["Bike"]
+                                    else:
+                                        length_fv = self.vehicle_length["Car"]
                                     speed_cv = traci.vehicle.getSpeed(veh_id)
                                     pos_cv = -(
                                         network_state[inter_id]["lane_length"][j]
                                         - traci.vehicle.getLanePosition(veh_id)
-                                        - 13
                                     )
                                     s_star = (
                                         2
@@ -738,13 +775,13 @@ class MpcAgent:
                                         / (
                                             2
                                             * (
-                                                self.max_acc
+                                                self.max_acc[type]
                                                 * self.comf_acc
                                             )
                                             ** 0.5
                                         )
                                     )
-                                    a_ref = self.max_acc * (
+                                    a_ref = self.max_acc[type] * (
                                         1
                                         - (speed_cv / self.network_speed_limit)
                                         ** self.delta_idm
@@ -753,7 +790,7 @@ class MpcAgent:
                                             / (
                                                 pos_fv
                                                 - pos_cv
-                                                - self.vehicle_length
+                                                - length_fv
                                             )
                                         )
                                         ** 2

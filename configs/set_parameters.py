@@ -7,7 +7,7 @@ def set_common_paras(paras):
     # Prediction horizon of the MPC problem, i.e., T^{s}.
     paras["num_predict_steps"] = 6
     # Number of slower steps used to construct the faster scale problem, i.e., h in Equation (24).
-    paras["faster_steps_from_slower"] = 4
+    paras["faster_steps_from_slower"] = 6
     # Length of each slower step, i.e., \Delta T_{s}.
     paras["delta_T"] = 5
     # Length of each faster step, i.e., \Delta T_{f}.
@@ -19,23 +19,31 @@ def set_common_paras(paras):
     # Discount ratio used to stabilize the MPC problem.
     paras["discount_ratio"] = 0.95
     # weighting factor for each mode (for the slower scale problem optimization)(must add up to 1)
-    paras["weight(Vehicles/Pedestrians)"] = (0.5, 0.5)
+    paras["weight(Vehicles/Pedestrians/Bikes)"] = (0.3, 0.3, 0.3)
 
     ## IDM model parameters, see Equation (11) in the second paper.
-    # Maximum acceleration that the vehicles can reach, in m/s^{2}.
-    paras["max_acc"] = 3.5
+    # Maximum acceleration that the vechiles can reach, in m/s^{2}.
+    paras["max_acc"] = {"Car": 4, "Bike": 1.2}
     # Minimum acceleration, i.e., the maximum braking capability, in m/s^{2}.
-    paras["min_acc"] = -5
+    paras["min_acc"] = {"Car": -5, "Bike": -3}
     # Comfortable acceleration for each vehicle.
     paras["comf_acc"] = 1.67
     # The constant acceleration exponent.
     paras["delta_idm"] = 4
 
+    # Unified Model parameters:
+    paras["max_spd"] = {"Car": 13, "Bike": 6}
+    paras["k"] = {"Car": 1.89, "Bike": 1.09}
+    paras["mass"] = {"Car": 1500, "Bike": 10}
+    paras["Ai"] = {"Car": 2000, "Bike": 500}
+    paras["Bi"] = {"Car": 0.08, "Bike": 0.08}
+    paras["dmin"] = {"Car": 12, "Bike": 2.2}
+
     ## Simulation parameters.
     # Penetration rate of CAVs.
     paras["penetration"] = 1
     # Concurrent or Exclusive Pedestrian phasing
-    paras["ped_phasing"] = "Concurrent" #"Concurrent" or "Exclusive"
+    paras["ped_phasing"] = "Concurrent" #"Concurrent" or "Exclusive" or "hybrid" (bike concur ped excl)
     # Random seed used to generate the volume.
     paras["random_seed"] = 1
     # simulation duration.
@@ -43,7 +51,7 @@ def set_common_paras(paras):
     # Simulation steps.
     paras["simulation_steps"] = paras["simulation_duration"] // paras["delta_T"]
     # Signal yellow time added between conflicting phases.
-    if paras["ped_phasing"] == "Concurrent":
+    if paras["ped_phasing"] == "Concurrent" or paras["ped_phasing"]=="hybrid":
         paras["yellow_time"] = 5
         paras["all_red_time"] = 2
     else:
@@ -52,7 +60,9 @@ def set_common_paras(paras):
     # Speed limit of all roads, in m/s.
     paras["speed_limit"] = 13
     # Vehicle length.
-    paras["vehicle_length"] = 5
+    paras["length"] = {"Car": 5, "Bike": 1.6}
+    # Minimum Gap between current and leading
+    paras["minGap"] = {"Car": 2, "Bike": 0.5}
     # Communication range, in m.
     paras["communication_range"] = 200
     # We simulate the volumes in a wave feature. This parameter represents the half-period of such waves. In seconds.
@@ -68,6 +78,7 @@ def set_common_paras(paras):
     paras["ratio_ev"] = 1
     # Poisson gamma for pedestrian demand
     paras["poisson_gamma_pedestrian"] = 0.04 # high:0.08 medium=0.04 low=0.01
+    paras["poisson_gamma_bike"] = 0.02 # high:0.04 medium=0.02 low=0.01
     paras["ped_demand_symmetry"] = "Asymmetric" # Asymmetric or Symmetric pedestrian demand
 
     ## pedestrian parameters:
