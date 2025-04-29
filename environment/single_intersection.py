@@ -332,327 +332,247 @@ class SingleIntersection:
                             bike_demand[bike_map[bike_lane_id[i]]][step + 1].add(bikes_lane[j])
             # print("bike demand: ", bike_demand)
 
-                    ## Get dynamic information based on Unified Model:
-                    for i in range(len(lane_id)):
-                        pos_vehicles2.append([])
-                        speed_vehicles2.append([])
-                        arrival_times2.append([])
-                        veh_id2.append([])
-                        types.append([])
-                        cars_lane = traci.lane.getLastStepVehicleIDs(lane_id[i])
-                        num_vehicles_lane = 0
-                        for j in range(len(cars_lane) - 1, -1, -1):
-                            self.next_pos.setdefault(cars_lane[j], None)
-                            self.next_spd.setdefault(cars_lane[j], None)
-                            # if cars_lane[j] == "WE-bike.5":
-                            #     print(self.next_pos[cars_lane[j]])
-                            #     print(self.next_spd[cars_lane[j]])
-                            #     a=2
-                            if cars_lane[j] in cav_ids:
-                                ## This is a CAV
-                                if (
+            ## Get dynamic information based on Unified Model:
+            for i in range(len(lane_id)):
+                pos_vehicles2.append([])
+                speed_vehicles2.append([])
+                arrival_times2.append([])
+                veh_id2.append([])
+                types.append([])
+                cars_lane = traci.lane.getLastStepVehicleIDs(lane_id[i])
+                num_vehicles_lane = 0
+                for j in range(len(cars_lane) - 1, -1, -1):
+                    self.next_pos.setdefault(cars_lane[j], None)
+                    self.next_spd.setdefault(cars_lane[j], None)
+                    # if cars_lane[j] == "WE-bike.5":
+                    #     print(self.next_pos[cars_lane[j]])
+                    #     print(self.next_spd[cars_lane[j]])
+                    #     a=2
+                    if cars_lane[j] in cav_ids:
+                        ## This is a CAV
+                        if (
+                                lane_length[i]
+                                - traci.vehicle.getLanePosition(cars_lane[j])
+                                <= communication_range
+                        ):
+                            ## The current CAV is within the communication range.
+                            pos_vehicles2[-1].append(
+                                -(
                                         lane_length[i]
                                         - traci.vehicle.getLanePosition(cars_lane[j])
-                                        <= communication_range
-                                ):
-                                    ## The current CAV is within the communication range.
-                                    pos_vehicles2[-1].append(
-                                        -(
-                                                lane_length[i]
-                                                - traci.vehicle.getLanePosition(cars_lane[j])
-                                        )
-                                    )
-                                    speed_vehicles2[-1].append(
-                                        traci.vehicle.getSpeed(cars_lane[j])
-                                    )
-                                    veh_id2[-1].append(cars_lane[j])
-                                    types[-1].append("Car")
+                                )
+                            )
+                            speed_vehicles2[-1].append(
+                                traci.vehicle.getSpeed(cars_lane[j])
+                            )
+                            veh_id2[-1].append(cars_lane[j])
+                            types[-1].append("Car")
 
-                                    # Now check if there are any HDVs or Bikes in front of it,and check safety
-                                    if num_vehicles_lane >= 1 and pos_vehicles2[-1][-2] - pos_vehicles2[-1][-1] < \
-                                            self.paras["minGap"][types[-1][-1]] + self.paras["length"][types[-1][-2]]:
-                                        pos_vehicles2[-1][-1] = pos_vehicles2[-1][-2] - self.paras["minGap"][
-                                            types[-1][-1]] - self.paras["length"][types[-1][-2]]
+                            # Now check if there are any HDVs or Bikes in front of it,and check safety
+                            if num_vehicles_lane >= 1 and pos_vehicles2[-1][-2] - pos_vehicles2[-1][-1] < \
+                                    self.paras["minGap"][types[-1][-1]] + self.paras["length"][types[-1][-2]]:
+                                pos_vehicles2[-1][-1] = pos_vehicles2[-1][-2] - self.paras["minGap"][
+                                    types[-1][-1]] - self.paras["length"][types[-1][-2]]
 
-                                    num_vehicles_lane += 1
-                                else:
-                                    ## The current CAV is outside the communication range. We need to check if
-                                    ## it will arrive within the MPC's prediction horizon. If so, add its arrival time.
-                                    temp = (
-                                                   lane_length[i]
-                                                   - traci.vehicle.getLanePosition(cars_lane[j])
-                                                   - communication_range
-                                           ) / speed_limit
-                                    if temp < delta_T * num_predict_steps:
-                                        arrival_times2[-1].append(
-                                            cur_step + int(temp / delta_T_faster)
-                                        )
-                                        veh_id2[-1].append(cars_lane[j])
-                                        types[-1].append("Car")
-                                        num_vehicles_lane += 1
-                            else:
-                                # This is an HDV or bike
-                                if "bike" in cars_lane[j]:
-                                    type = "Bike"
-                                else:
-                                    type = "Car"
-                                if num_vehicles_lane == 0:
-                                    # The HDV or bike is the first on the lane
-                                    if not self.next_pos[cars_lane[j]]:
-                                        # has just arrived to the lane
-                                        pos_vehicles2[-1].append(
-                                            -(
-                                                    lane_length[i]
-                                                    - self.paras["length"][type]
-                                            )
-                                        )
-                                        speed_vehicles2[-1].append(0)
-                                        veh_id2[-1].append(cars_lane[j])
-                                        types[-1].append(type)
-                                        num_vehicles_lane += 1
-                                        self.next_spd[cars_lane[j]] = 0
-                                        self.next_pos[cars_lane[j]] = -(
-                                                    lane_length[i] - self.paras["length"][type])
-                                    else:
-                                        # The HDV or bike have entered the lane in previous time steps and are first on the lane
-                                        pos_vehicles2[-1].append(self.next_pos[cars_lane[j]])
-                                        speed_vehicles2[-1].append(self.next_spd[cars_lane[j]])
-                                        if type == "Car" and traci.vehicle.getSpeed(cars_lane[j]) < 1:
-                                            # The vehicle is stopping because of the traffic light (because first in the line) and cannot have free flow
-                                            self.next_spd[cars_lane[j]] = 0
-                                            self.next_pos[cars_lane[j]] = -0.1
-                                        else:
-                                            # vehicle is not stopping
-                                            self.next_pos[cars_lane[j]] = min(-0.1, pos_vehicles2[-1][-1] +
-                                                                              speed_vehicles2[-1][-1] * delta_T_faster)
-                                            self.next_spd[cars_lane[j]] = min(self.paras["max_spd"][type],
-                                                                              self.paras["max_acc"][
-                                                                                  type] * delta_T_faster +
-                                                                              speed_vehicles2[-1][-1])
-                                        veh_id2[-1].append(cars_lane[j])
-                                        types[-1].append(type)
-                                        num_vehicles_lane += 1
-                                else:
-                                    # There are already vehicles in front of the HDV or bike
-                                    front_veh = veh_id2[-1][-1]
-                                    # we should estimate the speed and position of HDV and bikes based on the Unified Model
-                                    if not self.next_pos[cars_lane[j]]:
-                                        # This vehicle has just arrived to the lane and this is for only initialization
-                                        # (next speed and pos are gonna be calculated again later)
-                                        self.next_spd[cars_lane[j]] = 0
-                                        self.next_pos[cars_lane[j]] = -(
-                                                    lane_length[i] - traci.vehicle.getLanePosition(cars_lane[j]))
-                                    pos_vehicles2[-1].append(self.next_pos[cars_lane[j]])
-                                    speed_vehicles2[-1].append(self.next_spd[cars_lane[j]])
-                                    veh_id2[-1].append(cars_lane[j])
-                                    types[-1].append(type)
-                                    num_vehicles_lane += 1
-
-                                    print(veh_id2)
-                                    print(types)
-
-                                    if (pos_vehicles2[-1][-2] - pos_vehicles2[-1][-1] < self.paras["minGap"][type] +
-                                            self.paras["length"][types[-1][-2]]):
-                                        # print(pos_vehicles2[-1][-1])
-                                        # print(pos_vehicles2[-1][-2])
-                                        pos_vehicles2[-1][-1] = pos_vehicles2[-1][-2] - self.paras["minGap"][type] - \
-                                                                self.paras["length"][types[-1][-2]] - 5
-                                        # print(pos_vehicles2[-1][-1])
-                                        # print(pos_vehicles2[-1][-2])
-
-                                    d = pos_vehicles2[-1][-2] - pos_vehicles2[-1][-1] - self.paras["length"][
-                                        types[-1][-2]]
-                                    center_distance = d + self.paras["length"][types[-1][-1]] / 2 + \
-                                                      self.paras["length"][types[-1][-2]] / 2
-                                    dmin = self.paras["dmin"][type]
-                                    if center_distance < dmin:
-                                        v_desired = 0
-                                    elif dmin < center_distance < dmin + self.paras["max_spd"][type] / self.paras["k"][
-                                        type]:
-                                        v_desired = self.paras["k"][type] * (center_distance - dmin)
-                                    else:  # (center_distance> )
-                                        v_desired = self.paras["max_spd"][type]
-
-                                    Fij = self.paras["Ai"][type] * math.e ** ((-d) / self.paras["Bi"][type]) * (-1)
-                                    UM_acc = 1 / self.paras["mass"][type] * ((self.paras["mass"][type] * (
-                                                v_desired - self.next_spd[cars_lane[j]]) / 0.5) + Fij)
-                                    speed = max(0, UM_acc * delta_T_faster + speed_vehicles2[-1][-1])
-                                    print(speed)
-                                    speed = min(speed, self.paras["max_spd"][type])
-                                    print(speed)
-                                    self.next_spd[cars_lane[j]] = speed
-                                    print(self.next_pos[cars_lane[j]])
-                                    self.next_pos[cars_lane[j]] = min(-0.1, 1 / 2 * UM_acc * delta_T_faster ** 2 +
-                                                                      speed_vehicles2[-1][-1] * delta_T_faster +
-                                                                      pos_vehicles2[-1][-1])
-                                    print(self.next_pos[cars_lane[j]])
-
-                        ## Get dynamic information. Use linear interpolation to estimate HDV's and Bike's state.
-                    for i in range(len(lane_id)):
-                        pos_vehicles.append([])
-                        speed_vehicles.append([])
-                        wt_vehicles.append([])
-                        arrival_times.append([])
-                        veh_id.append([])
-                        veh_len.append([])
-                        minGap.append([])
-                        cars_lane = traci.lane.getLastStepVehicleIDs(lane_id[i])
-
-                        # Number of vehicles in the current lane and also in the communication range.
-                        num_vehicles_lane = 0
-                        # Number of HDVs between two CAVs. Will be set to 0 when we find a CAV.
-                        current_num_hdv_bike = 0
-                        # HDV ids between two CAVs. Will be set to empty when we find a CAV.
-                        current_ids_hdv_bike = []
-                        rates = []
-                        lengths = []
-                        for j in range(len(cars_lane) - 1, -1, -1):
-                            if cars_lane[j] in cav_ids:
-                                ## This is a CAV, we need to first check if there are HDVs in front of it.
-                                if current_num_hdv_bike == 0:
-                                    ## There is no HDV or bike between the current CAV and the CAV ahead.
-                                    if (
+                            num_vehicles_lane += 1
+                        else:
+                            ## The current CAV is outside the communication range. We need to check if
+                            ## it will arrive within the MPC's prediction horizon. If so, add its arrival time.
+                            temp = (
+                                           lane_length[i]
+                                           - traci.vehicle.getLanePosition(cars_lane[j])
+                                           - communication_range
+                                   ) / speed_limit
+                            if temp < delta_T * num_predict_steps:
+                                arrival_times2[-1].append(
+                                    cur_step + int(temp / delta_T_faster)
+                                )
+                                veh_id2[-1].append(cars_lane[j])
+                                types[-1].append("Car")
+                                num_vehicles_lane += 1
+                    else:
+                        # This is an HDV or bike
+                        if "bike" in cars_lane[j]:
+                            type = "Bike"
+                        else:
+                            type = "Car"
+                        if num_vehicles_lane == 0:
+                            # The HDV or bike is the first on the lane
+                            if not self.next_pos[cars_lane[j]]:
+                                # has just arrived to the lane
+                                pos_vehicles2[-1].append(
+                                    -(
                                             lane_length[i]
-                                            - traci.vehicle.getLanePosition(cars_lane[j])
-                                            <= communication_range
-                                    ):
-                                        ## The current CAV is within the communication range.
-                                        # print(lane_id[i])
-                                        # print(cars_lane[j])
-                                        pos_vehicles[-1].append(
-                                            -(
-                                                    lane_length[i]
-                                                    - traci.vehicle.getLanePosition(cars_lane[j])
-                                            )
-                                        )
-                                        speed_vehicles[-1].append(
-                                            traci.vehicle.getSpeed(cars_lane[j])
-                                        )
-                                        wt_vehicles[-1].append(
-                                            traci.vehicle.getWaitingTime(cars_lane[j])
-                                        )
-                                        veh_id[-1].append(cars_lane[j])
-                                        if "bike" in cars_lane[j]:
-                                            rates.append(1)
-                                            lengths.append(1.6)
-                                        else:
-                                            rates.append(car_bike_gap)
-                                            lengths.append(5)
-                                        num_vehicles_lane += 1
-                                    else:
-                                        ## The current CAV is outside the communication range. We need to check if
-                                        ## it will arrive within the MPC's prediction horizon. If so, add its arrival time.
-                                        temp = (
-                                                       lane_length[i]
-                                                       - traci.vehicle.getLanePosition(cars_lane[j])
-                                                       - communication_range
-                                               ) / speed_limit
-                                        if temp < delta_T * num_predict_steps:
-                                            arrival_times[-1].append(
-                                                cur_step + int(temp / delta_T_faster)
-                                            )
-                                            veh_id[-1].append(cars_lane[j])
-                                            if "bike" in cars_lane[j]:
-                                                rates.append(1)
-                                                lengths.append(1.6)
-                                            else:
-                                                rates.append(car_bike_gap)
-                                                lengths.append(5)
-                                            num_vehicles_lane += 1
+                                            - self.paras["length"][type]
+                                    )
+                                )
+                                speed_vehicles2[-1].append(0)
+                                veh_id2[-1].append(cars_lane[j])
+                                types[-1].append(type)
+                                num_vehicles_lane += 1
+                                self.next_spd[cars_lane[j]] = 0
+                                self.next_pos[cars_lane[j]] = -(
+                                            lane_length[i] - self.paras["length"][type])
+                            else:
+                                # The HDV or bike have entered the lane in previous time steps and are first on the lane
+                                pos_vehicles2[-1].append(self.next_pos[cars_lane[j]])
+                                speed_vehicles2[-1].append(self.next_spd[cars_lane[j]])
+                                if type == "Car" and traci.vehicle.getSpeed(cars_lane[j]) < 1:
+                                    # The vehicle is stopping because of the traffic light (because first in the line) and cannot have free flow
+                                    self.next_spd[cars_lane[j]] = 0
+                                    self.next_pos[cars_lane[j]] = -0.1
                                 else:
-                                    ## There are some HDVs in front of the current CAV. Use interpolation to estimate their states.
-                                    print(cars_lane[j])
-                                    current_ids_hdv_bike.append(cars_lane[j])
-                                    if "bike" in cars_lane[j]:
-                                        rates.append(1)
-                                        lengths.append(1.6)
-                                    else:
-                                        rates.append(car_bike_gap)
-                                        lengths.append(5)
-                                    # Find the right most vehicle's state.
-                                    no_cav_ahead = False
-                                    if not pos_vehicles[-1]:
-                                        # This is the first CAV in the lane. All the vehicles in front of it are HDVs.
-                                        r_pos, r_spd, r_wt = (-0.1), 0, 0
-                                        pos_vehicles[-1].append(r_pos)
-                                        speed_vehicles[-1].append(r_spd)
-                                        wt_vehicles[-1].append(r_wt)
-                                        veh_id[-1].append(current_ids_hdv_bike[0])
-                                        current_num_hdv_bike -= 1
-                                        num_vehicles_lane += 1
-                                        no_cav_ahead = True
-                                    else:
-                                        # There are CAVs ahead. Simply get the values.
-                                        rates.insert(0, car_bike_gap)
-                                        lengths.insert(0, 5)
-                                        r_pos, r_spd, r_wt = (
-                                            pos_vehicles[-1][-1],
-                                            speed_vehicles[-1][-1],
-                                            wt_vehicles[-1][-1],
-                                        )
+                                    # vehicle is not stopping
+                                    self.next_pos[cars_lane[j]] = min(-0.1, pos_vehicles2[-1][-1] +
+                                                                      speed_vehicles2[-1][-1] * delta_T_faster)
+                                    self.next_spd[cars_lane[j]] = min(self.paras["max_spd"][type],
+                                                                      self.paras["max_acc"][
+                                                                          type] * delta_T_faster +
+                                                                      speed_vehicles2[-1][-1])
+                                veh_id2[-1].append(cars_lane[j])
+                                types[-1].append(type)
+                                num_vehicles_lane += 1
+                        else:
+                            # There are already vehicles in front of the HDV or bike
+                            front_veh = veh_id2[-1][-1]
+                            # we should estimate the speed and position of HDV and bikes based on the Unified Model
+                            if not self.next_pos[cars_lane[j]]:
+                                # This vehicle has just arrived to the lane and this is for only initialization
+                                # (next speed and pos are gonna be calculated again later)
+                                self.next_spd[cars_lane[j]] = 0
+                                self.next_pos[cars_lane[j]] = -(
+                                            lane_length[i] - traci.vehicle.getLanePosition(cars_lane[j]))
+                            pos_vehicles2[-1].append(self.next_pos[cars_lane[j]])
+                            speed_vehicles2[-1].append(self.next_spd[cars_lane[j]])
+                            veh_id2[-1].append(cars_lane[j])
+                            types[-1].append(type)
+                            num_vehicles_lane += 1
 
-                                    # Find the left most vehicle's state, i.e., the current vehicle's state.
-                                    l_pos = -(
+                            print(veh_id2)
+                            print(types)
+
+                            if (pos_vehicles2[-1][-2] - pos_vehicles2[-1][-1] < self.paras["minGap"][type] +
+                                    self.paras["length"][types[-1][-2]]):
+                                # print(pos_vehicles2[-1][-1])
+                                # print(pos_vehicles2[-1][-2])
+                                pos_vehicles2[-1][-1] = pos_vehicles2[-1][-2] - self.paras["minGap"][type] - \
+                                                        self.paras["length"][types[-1][-2]] - 5
+                                # print(pos_vehicles2[-1][-1])
+                                # print(pos_vehicles2[-1][-2])
+
+                            d = pos_vehicles2[-1][-2] - pos_vehicles2[-1][-1] - self.paras["length"][
+                                types[-1][-2]]
+                            center_distance = d + self.paras["length"][types[-1][-1]] / 2 + \
+                                              self.paras["length"][types[-1][-2]] / 2
+                            dmin = self.paras["dmin"][type]
+                            if center_distance < dmin:
+                                v_desired = 0
+                            elif dmin < center_distance < dmin + self.paras["max_spd"][type] / self.paras["k"][
+                                type]:
+                                v_desired = self.paras["k"][type] * (center_distance - dmin)
+                            else:  # (center_distance> )
+                                v_desired = self.paras["max_spd"][type]
+
+                            Fij = self.paras["Ai"][type] * math.e ** ((-d) / self.paras["Bi"][type]) * (-1)
+                            UM_acc = 1 / self.paras["mass"][type] * ((self.paras["mass"][type] * (
+                                        v_desired - self.next_spd[cars_lane[j]]) / 0.5) + Fij)
+                            speed = max(0, UM_acc * delta_T_faster + speed_vehicles2[-1][-1])
+                            print(speed)
+                            speed = min(speed, self.paras["max_spd"][type])
+                            print(speed)
+                            self.next_spd[cars_lane[j]] = speed
+                            print(self.next_pos[cars_lane[j]])
+                            self.next_pos[cars_lane[j]] = min(-0.1, 1 / 2 * UM_acc * delta_T_faster ** 2 +
+                                                              speed_vehicles2[-1][-1] * delta_T_faster +
+                                                              pos_vehicles2[-1][-1])
+                            print(self.next_pos[cars_lane[j]])
+
+            ## Get dynamic information. Use linear interpolation to estimate HDV's and Bike's state.
+            for i in range(len(lane_id)):
+                pos_vehicles.append([])
+                speed_vehicles.append([])
+                wt_vehicles.append([])
+                arrival_times.append([])
+                veh_id.append([])
+                veh_len.append([])
+                minGap.append([])
+                cars_lane = traci.lane.getLastStepVehicleIDs(lane_id[i])
+
+                # Number of vehicles in the current lane and also in the communication range.
+                num_vehicles_lane = 0
+                # Number of HDVs between two CAVs. Will be set to 0 when we find a CAV.
+                current_num_hdv_bike = 0
+                # HDV ids between two CAVs. Will be set to empty when we find a CAV.
+                current_ids_hdv_bike = []
+                rates = []
+                lengths = []
+                for j in range(len(cars_lane) - 1, -1, -1):
+                    if cars_lane[j] in cav_ids:
+                        ## This is a CAV, we need to first check if there are HDVs in front of it.
+                        if current_num_hdv_bike == 0:
+                            ## There is no HDV or bike between the current CAV and the CAV ahead.
+                            if (
+                                    lane_length[i]
+                                    - traci.vehicle.getLanePosition(cars_lane[j])
+                                    <= communication_range
+                            ):
+                                ## The current CAV is within the communication range.
+                                # print(lane_id[i])
+                                # print(cars_lane[j])
+                                pos_vehicles[-1].append(
+                                    -(
                                             lane_length[i]
                                             - traci.vehicle.getLanePosition(cars_lane[j])
                                     )
-                                    l_spd = traci.vehicle.getSpeed(cars_lane[j])
-                                    l_wt = traci.vehicle.getWaitingTime(cars_lane[j])
-
-                                    # Estimate HDVs' states infront and record them if in communication range or will arrive during MPC's prediction horizon.
-                                    for k in range(current_num_hdv_bike + 1):
-                                        print(current_ids_hdv_bike)
-                                        print(rates)
-                                        print(veh_id[-1][-1])
-
-                                        t_pos = r_pos - lengths[0] + sum(rates[1:k + 2]) / sum(rates[1:]) * (
-                                                l_pos - (r_pos - sum(lengths[0:-1]))
-                                        ) - sum(lengths[1:k + 1])
-                                        t_spd = r_spd + sum(rates[1:k + 2]) / sum(rates[1:]) * (
-                                                l_spd - r_spd
-                                        )
-                                        t_wt = r_wt + sum(rates[1:k + 2]) / sum(rates[1:]) * (
-                                                l_wt - r_wt
-                                        )
-                                        if -t_pos <= communication_range:
-                                            pos_vehicles[-1].append(t_pos)
-                                            speed_vehicles[-1].append(t_spd)
-                                            wt_vehicles[-1].append(t_wt)
-                                            if no_cav_ahead:
-                                                veh_id[-1].append(current_ids_hdv_bike[k + 1])
-                                            else:
-                                                veh_id[-1].append(current_ids_hdv_bike[k])
-                                            num_vehicles_lane += 1
-                                        else:
-                                            temp = (-t_pos - communication_range) / speed_limit
-                                            if temp < delta_T * num_predict_steps:
-                                                arrival_times[-1].append(temp)
-                                                if no_cav_ahead:
-                                                    veh_id[-1].append(current_ids_hdv_bike[k + 1])
-                                                else:
-                                                    veh_id[-1].append(current_ids_hdv_bike[k])
-                                                num_vehicles_lane += 1
-                                    # rates = []
-                                current_num_hdv_bike = 0
-                                current_ids_hdv_bike = []
-                                rates = []
-                                lengths = []
-                            else:
-                                ## This is a HDV or Bike. We can't get the state. Just record the ids and update the number of HDVs and Bikes.
-                                current_ids_hdv_bike.append(cars_lane[j])
+                                )
+                                speed_vehicles[-1].append(
+                                    traci.vehicle.getSpeed(cars_lane[j])
+                                )
+                                wt_vehicles[-1].append(
+                                    traci.vehicle.getWaitingTime(cars_lane[j])
+                                )
+                                veh_id[-1].append(cars_lane[j])
                                 if "bike" in cars_lane[j]:
                                     rates.append(1)
                                     lengths.append(1.6)
                                 else:
                                     rates.append(car_bike_gap)
                                     lengths.append(5)
-                                current_num_hdv_bike += 1
-
-                        ## There could be a corner case where the last several vehicles in a lane are all HDVs.
-                        ## We need to estimate the information of those vehicles. The methods are the same as above.
-                        if current_num_hdv_bike != 0:
+                                num_vehicles_lane += 1
+                            else:
+                                ## The current CAV is outside the communication range. We need to check if
+                                ## it will arrive within the MPC's prediction horizon. If so, add its arrival time.
+                                temp = (
+                                               lane_length[i]
+                                               - traci.vehicle.getLanePosition(cars_lane[j])
+                                               - communication_range
+                                       ) / speed_limit
+                                if temp < delta_T * num_predict_steps:
+                                    arrival_times[-1].append(
+                                        cur_step + int(temp / delta_T_faster)
+                                    )
+                                    veh_id[-1].append(cars_lane[j])
+                                    if "bike" in cars_lane[j]:
+                                        rates.append(1)
+                                        lengths.append(1.6)
+                                    else:
+                                        rates.append(car_bike_gap)
+                                        lengths.append(5)
+                                    num_vehicles_lane += 1
+                        else:
+                            ## There are some HDVs in front of the current CAV. Use interpolation to estimate their states.
+                            print(cars_lane[j])
+                            current_ids_hdv_bike.append(cars_lane[j])
+                            if "bike" in cars_lane[j]:
+                                rates.append(1)
+                                lengths.append(1.6)
+                            else:
+                                rates.append(car_bike_gap)
+                                lengths.append(5)
+                            # Find the right most vehicle's state.
                             no_cav_ahead = False
                             if not pos_vehicles[-1]:
+                                # This is the first CAV in the lane. All the vehicles in front of it are HDVs.
                                 r_pos, r_spd, r_wt = (-0.1), 0, 0
                                 pos_vehicles[-1].append(r_pos)
                                 speed_vehicles[-1].append(r_spd)
@@ -662,31 +582,38 @@ class SingleIntersection:
                                 num_vehicles_lane += 1
                                 no_cav_ahead = True
                             else:
+                                # There are CAVs ahead. Simply get the values.
+                                rates.insert(0, car_bike_gap)
+                                lengths.insert(0, 5)
                                 r_pos, r_spd, r_wt = (
                                     pos_vehicles[-1][-1],
                                     speed_vehicles[-1][-1],
                                     wt_vehicles[-1][-1],
                                 )
-                            if not no_cav_ahead:
-                                rates.insert(0, car_bike_gap)
-                                lengths.insert(0, 5)
+
+                            # Find the left most vehicle's state, i.e., the current vehicle's state.
                             l_pos = -(
                                     lane_length[i]
-                                    - traci.vehicle.getLanePosition(cars_lane[0])
-                                    - 13
+                                    - traci.vehicle.getLanePosition(cars_lane[j])
                             )
-                            l_spd = traci.vehicle.getSpeed(cars_lane[0])
-                            l_wt = traci.vehicle.getWaitingTime(cars_lane[0])
-                            for k in range(current_num_hdv_bike):
+                            l_spd = traci.vehicle.getSpeed(cars_lane[j])
+                            l_wt = traci.vehicle.getWaitingTime(cars_lane[j])
+
+                            # Estimate HDVs' states infront and record them if in communication range or will arrive during MPC's prediction horizon.
+                            for k in range(current_num_hdv_bike + 1):
                                 print(current_ids_hdv_bike)
                                 print(rates)
                                 print(veh_id[-1][-1])
+
                                 t_pos = r_pos - lengths[0] + sum(rates[1:k + 2]) / sum(rates[1:]) * (
                                         l_pos - (r_pos - sum(lengths[0:-1]))
                                 ) - sum(lengths[1:k + 1])
-
-                                t_spd = r_spd + sum(rates[1:k + 2]) / sum(rates[1:]) * (l_spd - r_spd)
-                                t_wt = r_wt + sum(rates[1:k + 2]) / sum(rates[1:]) * (l_wt - r_wt)
+                                t_spd = r_spd + sum(rates[1:k + 2]) / sum(rates[1:]) * (
+                                        l_spd - r_spd
+                                )
+                                t_wt = r_wt + sum(rates[1:k + 2]) / sum(rates[1:]) * (
+                                        l_wt - r_wt
+                                )
                                 if -t_pos <= communication_range:
                                     pos_vehicles[-1].append(t_pos)
                                     speed_vehicles[-1].append(t_spd)
@@ -699,44 +626,117 @@ class SingleIntersection:
                                 else:
                                     temp = (-t_pos - communication_range) / speed_limit
                                     if temp < delta_T * num_predict_steps:
-                                        arrival_times[-1].append(
-                                            cur_step + int(temp / delta_T_faster)
-                                        )
+                                        arrival_times[-1].append(temp)
                                         if no_cav_ahead:
                                             veh_id[-1].append(current_ids_hdv_bike[k + 1])
                                         else:
                                             veh_id[-1].append(current_ids_hdv_bike[k])
                                         num_vehicles_lane += 1
-                        num_vehicles_max = max(num_vehicles_max, num_vehicles_lane)
+                            # rates = []
+                        current_num_hdv_bike = 0
+                        current_ids_hdv_bike = []
+                        rates = []
+                        lengths = []
+                    else:
+                        ## This is a HDV or Bike. We can't get the state. Just record the ids and update the number of HDVs and Bikes.
+                        current_ids_hdv_bike.append(cars_lane[j])
+                        if "bike" in cars_lane[j]:
+                            rates.append(1)
+                            lengths.append(1.6)
+                        else:
+                            rates.append(car_bike_gap)
+                            lengths.append(5)
+                        current_num_hdv_bike += 1
 
-                    for ind_lane in range(len(veh_id)):
-                        for ind_veh in veh_id[ind_lane]:
-                            if "bike" in ind_veh:
-                                veh_len[ind_lane].append(self.paras["length"]["Bike"])
-                                minGap[ind_lane].append(self.paras["minGap"]["Bike"])
+                ## There could be a corner case where the last several vehicles in a lane are all HDVs.
+                ## We need to estimate the information of those vehicles. The methods are the same as above.
+                if current_num_hdv_bike != 0:
+                    no_cav_ahead = False
+                    if not pos_vehicles[-1]:
+                        r_pos, r_spd, r_wt = (-0.1), 0, 0
+                        pos_vehicles[-1].append(r_pos)
+                        speed_vehicles[-1].append(r_spd)
+                        wt_vehicles[-1].append(r_wt)
+                        veh_id[-1].append(current_ids_hdv_bike[0])
+                        current_num_hdv_bike -= 1
+                        num_vehicles_lane += 1
+                        no_cav_ahead = True
+                    else:
+                        r_pos, r_spd, r_wt = (
+                            pos_vehicles[-1][-1],
+                            speed_vehicles[-1][-1],
+                            wt_vehicles[-1][-1],
+                        )
+                    if not no_cav_ahead:
+                        rates.insert(0, car_bike_gap)
+                        lengths.insert(0, 5)
+                    l_pos = -(
+                            lane_length[i]
+                            - traci.vehicle.getLanePosition(cars_lane[0])
+                            - 13
+                    )
+                    l_spd = traci.vehicle.getSpeed(cars_lane[0])
+                    l_wt = traci.vehicle.getWaitingTime(cars_lane[0])
+                    for k in range(current_num_hdv_bike):
+                        print(current_ids_hdv_bike)
+                        print(rates)
+                        print(veh_id[-1][-1])
+                        t_pos = r_pos - lengths[0] + sum(rates[1:k + 2]) / sum(rates[1:]) * (
+                                l_pos - (r_pos - sum(lengths[0:-1]))
+                        ) - sum(lengths[1:k + 1])
+
+                        t_spd = r_spd + sum(rates[1:k + 2]) / sum(rates[1:]) * (l_spd - r_spd)
+                        t_wt = r_wt + sum(rates[1:k + 2]) / sum(rates[1:]) * (l_wt - r_wt)
+                        if -t_pos <= communication_range:
+                            pos_vehicles[-1].append(t_pos)
+                            speed_vehicles[-1].append(t_spd)
+                            wt_vehicles[-1].append(t_wt)
+                            if no_cav_ahead:
+                                veh_id[-1].append(current_ids_hdv_bike[k + 1])
                             else:
-                                veh_len[ind_lane].append(self.paras["length"]["Car"])
-                                minGap[ind_lane].append(self.paras["minGap"]["Car"])
+                                veh_id[-1].append(current_ids_hdv_bike[k])
+                            num_vehicles_lane += 1
+                        else:
+                            temp = (-t_pos - communication_range) / speed_limit
+                            if temp < delta_T * num_predict_steps:
+                                arrival_times[-1].append(
+                                    cur_step + int(temp / delta_T_faster)
+                                )
+                                if no_cav_ahead:
+                                    veh_id[-1].append(current_ids_hdv_bike[k + 1])
+                                else:
+                                    veh_id[-1].append(current_ids_hdv_bike[k])
+                                num_vehicles_lane += 1
+                num_vehicles_max = max(num_vehicles_max, num_vehicles_lane)
 
-                    self.network_state[inter_id] = {
-                        "num_vehicles_max": num_vehicles_max,
-                        "pos_vehicles": pos_vehicles2,
-                        "speed_vehicles": speed_vehicles2,
-                        "wt_vehicles": wt_vehicles,
-                        "arrival_times": arrival_times,
-                        "signal_phase": signal_phase,
-                        "num_lane": len(lane_id),
-                        "lane_length": lane_length,
-                        "lane_id": lane_id,
-                        "vehicle_id": veh_id,
-                        "pedestrian_demand_current": cross_demand_current,
-                        "pedestrian_demand": cross_demand_all_steps,
-                        "bike_demand": bike_demand,
-                        "vehicle_length": veh_len,
-                        "vehicle_types": types,
-                        "minGap": minGap,
-                    }
-            return self.network_state
+            for ind_lane in range(len(veh_id)):
+                for ind_veh in veh_id[ind_lane]:
+                    if "bike" in ind_veh:
+                        veh_len[ind_lane].append(self.paras["length"]["Bike"])
+                        minGap[ind_lane].append(self.paras["minGap"]["Bike"])
+                    else:
+                        veh_len[ind_lane].append(self.paras["length"]["Car"])
+                        minGap[ind_lane].append(self.paras["minGap"]["Car"])
+
+            self.network_state[inter_id] = {
+                "num_vehicles_max": num_vehicles_max,
+                "pos_vehicles": pos_vehicles2,
+                "speed_vehicles": speed_vehicles2,
+                "wt_vehicles": wt_vehicles,
+                "arrival_times": arrival_times,
+                "signal_phase": signal_phase,
+                "num_lane": len(lane_id),
+                "lane_length": lane_length,
+                "lane_id": lane_id,
+                "vehicle_id": veh_id,
+                "pedestrian_demand_current": cross_demand_current,
+                "pedestrian_demand": cross_demand_all_steps,
+                "bike_demand": bike_demand,
+                "vehicle_length": veh_len,
+                "vehicle_types": types,
+                "minGap": minGap,
+            }
+        return self.network_state
 
 
     def apply_control_commands(

@@ -93,6 +93,8 @@ class MpcAgent:
                             if state == 'G' and i < len(controlled_links):  # Ensure index is valid
                                 all_red = False
                                 for link_tuple in controlled_links[i]:  # Each entry is (incoming_lane, outgoing_lane, crossing)
+                                    print(link_tuple)
+                                    print(controlled_links[i])
                                     incoming_lane = link_tuple[0]
                                     crossing = traci.lane.getEdgeID(link_tuple[1])
                                     # Store vehicle lanes and pedestrian crossings
@@ -679,6 +681,10 @@ class MpcAgent:
                 id_vehicles_init = intersection_state["vehicle_id"][i]
                 pos_vehicles_init = intersection_state["pos_vehicles"][i]
                 pos_vehicles_point = s_vehicles_point[i]
+                print("i: ", i)
+                print(id_vehicles_init)
+                print(pos_vehicles_init)
+                print(speed_vehicles_init)
                 self.db_faster = self.ws.add_database()
                 self.set_faster_scale_dynamic_paras_single_lane(
                     critical_points,
