@@ -48,7 +48,7 @@ class SingleIntersection:
         self.map_diag = {}
         for inter_id in self.network_graph:
             self.map_diag.setdefault(inter_id, {})
-            if self.paras["ped_phasing"] == "Exclusive":
+            if self.paras["ped_phasing"] == "Exclusive" or self.paras["ped_phasing"] == "Hybrid":
                 for walkingarea in self.network_graph[inter_id]["walkingarea"]:
                     for crossing in self.network_graph[inter_id]["walkingarea"][walkingarea]["adjacent"]:
                         if self.network_graph[inter_id]["crossing"][crossing]["phasing"] == "Diagonal":
@@ -110,8 +110,6 @@ class SingleIntersection:
             data_dir_next
             + "/queues_"
             + control_type
-            + "_"
-            + volume_type
             + "_pene_"
             + str(int(penetration * 100))
             + ".xml"
@@ -120,8 +118,14 @@ class SingleIntersection:
             data_dir_next
             + "/tripinfo_"
             + control_type
-            + "_"
-            + volume_type
+            + "_pene_"
+            + str(int(penetration * 100))
+            + ".xml"
+        )
+        SSM_file = (
+            data_dir_next
+            + "/SSMinfo_"
+            + control_type
             + "_pene_"
             + str(int(penetration * 100))
             + ".xml"
@@ -138,6 +142,7 @@ class SingleIntersection:
                 queue_file,
                 "--tripinfo-output",
                 trip_file,
+                '--device.ssm.file=' + SSM_file,
                 "--step-length",
                 "0.5",
             ]
@@ -272,9 +277,11 @@ class SingleIntersection:
             ## count the bike demand
             for i in range(len(bike_lane_id)):
                 bikes_lane = traci.lane.getLastStepVehicleIDs(bike_lane_id[i])
-                print(bikes_lane)
+                # print(bikes_lane)
                 num = 0
                 for j in range(len(bikes_lane) - 1, -1, -1):
+                    # if bikes_lane[j] == "WE-bike.30":
+                    #     a=2
                     self.paras["bike_ids"].add(bikes_lane[j])
                     speed = traci.vehicle.getSpeed(bikes_lane[j])
                     pos = traci.vehicle.getLanePosition(bikes_lane[j])
@@ -300,21 +307,21 @@ class SingleIntersection:
                         Fij = self.paras["Ai"]["Bike"] * math.e ** ((-d) / self.paras["Bi"]["Bike"]) * (-1)
                         UM_acc = 1 / self.paras["mass"]["Bike"] * ((self.paras["mass"]["Bike"] * (
                                     v_desired - self.next_spd[bikes_lane[j]]) / 0.5) + Fij)
-                        print(UM_acc)
+                        # print(UM_acc)
                         UM_acc = max(UM_acc, self.paras["min_acc"]["Bike"])
                         UM_acc = min(UM_acc, self.paras["max_acc"]["Bike"])
-                        print(UM_acc)
+                        # print(UM_acc)
                         speed = max(0, UM_acc * delta_T_faster + self.next_spd[bikes_lane[j]])
-                        print(speed)
+                        # print(speed)
                         speed = min(speed, self.paras["max_spd"]["Bike"])
-                        print(speed)
+                        # print(speed)
                         self.next_spd[bikes_lane[j]] = speed
 
                         # print("self.next_spd[cars_lane[j]]", self.next_spd[cars_lane[j]])
-                        print(self.next_pos[bikes_lane[j]])
+                        # print(self.next_pos[bikes_lane[j]])
                         self.next_pos[bikes_lane[j]] = min(-0.1, 1 / 2 * UM_acc * delta_T_faster ** 2 + self.next_spd[
                             bikes_lane[j]] * delta_T_faster + self.next_pos[bikes_lane[j]])
-                        print(self.next_pos[bikes_lane[j]])
+                        # print(self.next_pos[bikes_lane[j]])
                     else:
                         self.next_pos[bikes_lane[j]] = min(-0.1,
                                                            1 / 2 * self.paras["max_acc"]["Bike"] * delta_T_faster ** 2 +
@@ -324,168 +331,14 @@ class SingleIntersection:
                                                            self.next_spd[bikes_lane[j]] + self.paras["max_acc"][
                                                                "Bike"] * delta_T_faster)
 
+                    # bikelane_length = self.paras["network_graph"][inter_id]["incoming_ped"][current_edge]["length"]
                     for step in range(num_predict_steps + 1):
                         if speed == 0:
                             if pos > 10:
                                 bike_demand[bike_map[bike_lane_id[i]]][1].add(bikes_lane[j])
-                        elif (186.4 - pos) <= (step + 1) * 10 and (186.4 - pos) >= (step) * 10:
+                        elif (186.4 - pos)/speed <= (step + 1) * delta_T and (186.4 - pos)/speed >= (step) * delta_T:
                             bike_demand[bike_map[bike_lane_id[i]]][step + 1].add(bikes_lane[j])
             # print("bike demand: ", bike_demand)
-
-            ## Get dynamic information based on Unified Model:
-            for i in range(len(lane_id)):
-                pos_vehicles2.append([])
-                speed_vehicles2.append([])
-                arrival_times2.append([])
-                veh_id2.append([])
-                types.append([])
-                cars_lane = traci.lane.getLastStepVehicleIDs(lane_id[i])
-                num_vehicles_lane = 0
-                for j in range(len(cars_lane) - 1, -1, -1):
-                    self.next_pos.setdefault(cars_lane[j], None)
-                    self.next_spd.setdefault(cars_lane[j], None)
-                    # if cars_lane[j] == "WE-bike.5":
-                    #     print(self.next_pos[cars_lane[j]])
-                    #     print(self.next_spd[cars_lane[j]])
-                    #     a=2
-                    if cars_lane[j] in cav_ids:
-                        ## This is a CAV
-                        if (
-                                lane_length[i]
-                                - traci.vehicle.getLanePosition(cars_lane[j])
-                                <= communication_range
-                        ):
-                            ## The current CAV is within the communication range.
-                            pos_vehicles2[-1].append(
-                                -(
-                                        lane_length[i]
-                                        - traci.vehicle.getLanePosition(cars_lane[j])
-                                )
-                            )
-                            speed_vehicles2[-1].append(
-                                traci.vehicle.getSpeed(cars_lane[j])
-                            )
-                            veh_id2[-1].append(cars_lane[j])
-                            types[-1].append("Car")
-
-                            # Now check if there are any HDVs or Bikes in front of it,and check safety
-                            if num_vehicles_lane >= 1 and pos_vehicles2[-1][-2] - pos_vehicles2[-1][-1] < \
-                                    self.paras["minGap"][types[-1][-1]] + self.paras["length"][types[-1][-2]]:
-                                pos_vehicles2[-1][-1] = pos_vehicles2[-1][-2] - self.paras["minGap"][
-                                    types[-1][-1]] - self.paras["length"][types[-1][-2]]
-
-                            num_vehicles_lane += 1
-                        else:
-                            ## The current CAV is outside the communication range. We need to check if
-                            ## it will arrive within the MPC's prediction horizon. If so, add its arrival time.
-                            temp = (
-                                           lane_length[i]
-                                           - traci.vehicle.getLanePosition(cars_lane[j])
-                                           - communication_range
-                                   ) / speed_limit
-                            if temp < delta_T * num_predict_steps:
-                                arrival_times2[-1].append(
-                                    cur_step + int(temp / delta_T_faster)
-                                )
-                                veh_id2[-1].append(cars_lane[j])
-                                types[-1].append("Car")
-                                num_vehicles_lane += 1
-                    else:
-                        # This is an HDV or bike
-                        if "bike" in cars_lane[j]:
-                            type = "Bike"
-                        else:
-                            type = "Car"
-                        if num_vehicles_lane == 0:
-                            # The HDV or bike is the first on the lane
-                            if not self.next_pos[cars_lane[j]]:
-                                # has just arrived to the lane
-                                pos_vehicles2[-1].append(
-                                    -(
-                                            lane_length[i]
-                                            - self.paras["length"][type]
-                                    )
-                                )
-                                speed_vehicles2[-1].append(0)
-                                veh_id2[-1].append(cars_lane[j])
-                                types[-1].append(type)
-                                num_vehicles_lane += 1
-                                self.next_spd[cars_lane[j]] = 0
-                                self.next_pos[cars_lane[j]] = -(
-                                            lane_length[i] - self.paras["length"][type])
-                            else:
-                                # The HDV or bike have entered the lane in previous time steps and are first on the lane
-                                pos_vehicles2[-1].append(self.next_pos[cars_lane[j]])
-                                speed_vehicles2[-1].append(self.next_spd[cars_lane[j]])
-                                if type == "Car" and traci.vehicle.getSpeed(cars_lane[j]) < 1:
-                                    # The vehicle is stopping because of the traffic light (because first in the line) and cannot have free flow
-                                    self.next_spd[cars_lane[j]] = 0
-                                    self.next_pos[cars_lane[j]] = -0.1
-                                else:
-                                    # vehicle is not stopping
-                                    self.next_pos[cars_lane[j]] = min(-0.1, pos_vehicles2[-1][-1] +
-                                                                      speed_vehicles2[-1][-1] * delta_T_faster)
-                                    self.next_spd[cars_lane[j]] = min(self.paras["max_spd"][type],
-                                                                      self.paras["max_acc"][
-                                                                          type] * delta_T_faster +
-                                                                      speed_vehicles2[-1][-1])
-                                veh_id2[-1].append(cars_lane[j])
-                                types[-1].append(type)
-                                num_vehicles_lane += 1
-                        else:
-                            # There are already vehicles in front of the HDV or bike
-                            front_veh = veh_id2[-1][-1]
-                            # we should estimate the speed and position of HDV and bikes based on the Unified Model
-                            if not self.next_pos[cars_lane[j]]:
-                                # This vehicle has just arrived to the lane and this is for only initialization
-                                # (next speed and pos are gonna be calculated again later)
-                                self.next_spd[cars_lane[j]] = 0
-                                self.next_pos[cars_lane[j]] = -(
-                                            lane_length[i] - traci.vehicle.getLanePosition(cars_lane[j]))
-                            pos_vehicles2[-1].append(self.next_pos[cars_lane[j]])
-                            speed_vehicles2[-1].append(self.next_spd[cars_lane[j]])
-                            veh_id2[-1].append(cars_lane[j])
-                            types[-1].append(type)
-                            num_vehicles_lane += 1
-
-                            print(veh_id2)
-                            print(types)
-
-                            if (pos_vehicles2[-1][-2] - pos_vehicles2[-1][-1] < self.paras["minGap"][type] +
-                                    self.paras["length"][types[-1][-2]]):
-                                # print(pos_vehicles2[-1][-1])
-                                # print(pos_vehicles2[-1][-2])
-                                pos_vehicles2[-1][-1] = pos_vehicles2[-1][-2] - self.paras["minGap"][type] - \
-                                                        self.paras["length"][types[-1][-2]] - 5
-                                # print(pos_vehicles2[-1][-1])
-                                # print(pos_vehicles2[-1][-2])
-
-                            d = pos_vehicles2[-1][-2] - pos_vehicles2[-1][-1] - self.paras["length"][
-                                types[-1][-2]]
-                            center_distance = d + self.paras["length"][types[-1][-1]] / 2 + \
-                                              self.paras["length"][types[-1][-2]] / 2
-                            dmin = self.paras["dmin"][type]
-                            if center_distance < dmin:
-                                v_desired = 0
-                            elif dmin < center_distance < dmin + self.paras["max_spd"][type] / self.paras["k"][
-                                type]:
-                                v_desired = self.paras["k"][type] * (center_distance - dmin)
-                            else:  # (center_distance> )
-                                v_desired = self.paras["max_spd"][type]
-
-                            Fij = self.paras["Ai"][type] * math.e ** ((-d) / self.paras["Bi"][type]) * (-1)
-                            UM_acc = 1 / self.paras["mass"][type] * ((self.paras["mass"][type] * (
-                                        v_desired - self.next_spd[cars_lane[j]]) / 0.5) + Fij)
-                            speed = max(0, UM_acc * delta_T_faster + speed_vehicles2[-1][-1])
-                            print(speed)
-                            speed = min(speed, self.paras["max_spd"][type])
-                            print(speed)
-                            self.next_spd[cars_lane[j]] = speed
-                            print(self.next_pos[cars_lane[j]])
-                            self.next_pos[cars_lane[j]] = min(-0.1, 1 / 2 * UM_acc * delta_T_faster ** 2 +
-                                                              speed_vehicles2[-1][-1] * delta_T_faster +
-                                                              pos_vehicles2[-1][-1])
-                            print(self.next_pos[cars_lane[j]])
 
             ## Get dynamic information. Use linear interpolation to estimate HDV's and Bike's state.
             for i in range(len(lane_id)):
@@ -561,7 +414,7 @@ class SingleIntersection:
                                     num_vehicles_lane += 1
                         else:
                             ## There are some HDVs in front of the current CAV. Use interpolation to estimate their states.
-                            print(cars_lane[j])
+                            # print(cars_lane[j])
                             current_ids_hdv_bike.append(cars_lane[j])
                             if "bike" in cars_lane[j]:
                                 rates.append(1)
@@ -601,9 +454,9 @@ class SingleIntersection:
 
                             # Estimate HDVs' states infront and record them if in communication range or will arrive during MPC's prediction horizon.
                             for k in range(current_num_hdv_bike + 1):
-                                print(current_ids_hdv_bike)
-                                print(rates)
-                                print(veh_id[-1][-1])
+                                # print(current_ids_hdv_bike)
+                                # print(rates)
+                                # print(veh_id[-1][-1])
 
                                 t_pos = r_pos - lengths[0] + sum(rates[1:k + 2]) / sum(rates[1:]) * (
                                         l_pos - (r_pos - sum(lengths[0:-1]))
@@ -673,14 +526,13 @@ class SingleIntersection:
                     l_pos = -(
                             lane_length[i]
                             - traci.vehicle.getLanePosition(cars_lane[0])
-                            - 13
                     )
                     l_spd = traci.vehicle.getSpeed(cars_lane[0])
                     l_wt = traci.vehicle.getWaitingTime(cars_lane[0])
                     for k in range(current_num_hdv_bike):
-                        print(current_ids_hdv_bike)
-                        print(rates)
-                        print(veh_id[-1][-1])
+                        # print(current_ids_hdv_bike)
+                        # print(rates)
+                        # print(veh_id[-1][-1])
                         t_pos = r_pos - lengths[0] + sum(rates[1:k + 2]) / sum(rates[1:]) * (
                                 l_pos - (r_pos - sum(lengths[0:-1]))
                         ) - sum(lengths[1:k + 1])
@@ -709,6 +561,181 @@ class SingleIntersection:
                                 num_vehicles_lane += 1
                 num_vehicles_max = max(num_vehicles_max, num_vehicles_lane)
 
+            ## Get dynamic information based on Unified Model:
+            for i in range(len(lane_id)):
+                pos_vehicles2.append([])
+                speed_vehicles2.append([])
+                arrival_times2.append([])
+                veh_id2.append([])
+                types.append([])
+                cars_lane = traci.lane.getLastStepVehicleIDs(lane_id[i])
+                num_vehicles_lane = 0
+                for j in range(len(cars_lane) - 1, -1, -1):
+                    if cars_lane[j] == "WE-bike.7":
+                        a=2
+                    self.next_pos.setdefault(cars_lane[j], None)
+                    self.next_spd.setdefault(cars_lane[j], None)
+                    # if cars_lane[j] == "WE-bike.5":
+                    #     print(self.next_pos[cars_lane[j]])
+                    #     print(self.next_spd[cars_lane[j]])
+                    #     a=2
+                    if cars_lane[j] in cav_ids:
+                        ## This is a CAV
+                        if (
+                                lane_length[i]
+                                - traci.vehicle.getLanePosition(cars_lane[j])
+                                <= communication_range
+                        ):
+                            ## The current CAV is within the communication range.
+                            pos_vehicles2[-1].append(
+                                -(
+                                        lane_length[i]
+                                        - traci.vehicle.getLanePosition(cars_lane[j])
+                                )
+                            )
+                            speed_vehicles2[-1].append(
+                                traci.vehicle.getSpeed(cars_lane[j])
+                            )
+                            veh_id2[-1].append(cars_lane[j])
+                            types[-1].append("Car")
+
+                            # Now check if there are any HDVs or Bikes in front of it,and check safety
+                            if num_vehicles_lane >= 1 and pos_vehicles2[-1][-2] - pos_vehicles2[-1][-1] < \
+                                    self.paras["minGap"][types[-1][-1]] + self.paras["length"][types[-1][-2]]:
+                                pos_vehicles2[-1][-1] = pos_vehicles2[-1][-2] - self.paras["minGap"][
+                                    types[-1][-1]] - self.paras["length"][types[-1][-2]]
+
+                            num_vehicles_lane += 1
+                        else:
+                            ## The current CAV is outside the communication range. We need to check if
+                            ## it will arrive within the MPC's prediction horizon. If so, add its arrival time.
+                            temp = (
+                                           lane_length[i]
+                                           - traci.vehicle.getLanePosition(cars_lane[j])
+                                           - communication_range
+                                   ) / speed_limit
+                            if temp < delta_T * num_predict_steps:
+                                arrival_times2[-1].append(
+                                    cur_step + int(temp / delta_T_faster)
+                                )
+                                veh_id2[-1].append(cars_lane[j])
+                                types[-1].append("Car")
+                                num_vehicles_lane += 1
+                    else:
+                        # This is an HDV or bike
+                        if "bike" in cars_lane[j]:
+                            type = "Bike"
+                        else:
+                            type = "Car"
+                        if num_vehicles_lane == 0:
+                            # The HDV or bike is the first on the lane
+                            if not self.next_pos[cars_lane[j]]:
+                                # has just arrived to the lane
+                                pos_vehicles2[-1].append(
+                                    -(
+                                            lane_length[i]
+                                            - self.paras["length"][type]
+                                    )
+                                )
+                                speed_vehicles2[-1].append(0)
+                                veh_id2[-1].append(cars_lane[j])
+                                types[-1].append(type)
+                                num_vehicles_lane += 1
+                                self.next_spd[cars_lane[j]] = 0
+                                self.next_pos[cars_lane[j]] = -(
+                                            lane_length[i] - self.paras["length"][type])
+                            else:
+                                # The HDV or bike have entered the lane in previous time steps and are first on the lane
+                                pos_vehicles2[-1].append(self.next_pos[cars_lane[j]])
+                                speed_vehicles2[-1].append(self.next_spd[cars_lane[j]])
+                                if traci.vehicle.getSpeed(cars_lane[j]) < 1:
+                                    # The vehicle is stopping because of the traffic light (because first in the line) and cannot have free flow
+                                    self.next_spd[cars_lane[j]] = 0
+                                    self.next_pos[cars_lane[j]] = -0.1
+                                else:
+                                    # vehicle is not stopping
+                                    self.next_pos[cars_lane[j]] = min(-0.1, pos_vehicles2[-1][-1] +
+                                                                      speed_vehicles2[-1][-1] * delta_T_faster)
+                                    # self.next_spd[cars_lane[j]] = min(self.paras["max_spd"][type],
+                                    #                                   self.paras["max_acc"][
+                                    #                                       type] * delta_T_faster +
+                                    #                                   speed_vehicles2[-1][-1])
+                                    if speed_vehicles[i][j]>0:
+                                        self.next_spd[cars_lane[j]] = min(self.paras["max_spd"][type],
+                                                                          self.paras["max_acc"][
+                                                                              type] * delta_T_faster +
+                                                                          speed_vehicles2[-1][-1], speed_vehicles[i][j])
+                                    else:
+                                        self.next_spd[cars_lane[j]] = min(self.paras["max_spd"][type],
+                                                                          self.paras["max_acc"][
+                                                                              type] * delta_T_faster +
+                                                                          speed_vehicles2[-1][-1])
+                                    # print("cars_lane[j]: ", cars_lane[j])
+                                    # print("speed_vehicles2[-1][-1]: ", speed_vehicles2[-1][-1])
+                                veh_id2[-1].append(cars_lane[j])
+                                types[-1].append(type)
+                                num_vehicles_lane += 1
+                        else:
+                            # There are already vehicles in front of the HDV or bike
+                            front_veh = veh_id2[-1][-1]
+                            # we should estimate the speed and position of HDV and bikes based on the Unified Model
+                            if not self.next_pos[cars_lane[j]]:
+                                # This vehicle has just arrived to the lane and this is for only initialization
+                                # (next speed and pos are gonna be calculated again later)
+                                self.next_spd[cars_lane[j]] = 0
+                                self.next_pos[cars_lane[j]] = -(lane_length[i] - traci.vehicle.getLanePosition(cars_lane[j]))
+                            pos_vehicles2[-1].append(self.next_pos[cars_lane[j]])
+                            speed_vehicles2[-1].append(self.next_spd[cars_lane[j]])
+                            veh_id2[-1].append(cars_lane[j])
+                            types[-1].append(type)
+                            num_vehicles_lane += 1
+                            #
+                            # print(veh_id2)
+                            # print(types)
+
+                            # if cars_lane[j] == "WE-bike.50":
+                            #     a=2
+
+                            if (pos_vehicles2[-1][-2] - pos_vehicles2[-1][-1] < self.paras["minGap"][type] +
+                                    self.paras["length"][types[-1][-2]]):
+                                # print(pos_vehicles2[-1][-1])
+                                # print(pos_vehicles2[-1][-2])
+                                pos_vehicles2[-1][-1] = pos_vehicles2[-1][-2] - self.paras["minGap"][type] - \
+                                                        self.paras["length"][types[-1][-2]]
+                                # print(pos_vehicles2[-1][-1])
+                                # print(pos_vehicles2[-1][-2])
+
+                            interaction = type
+                            if types[-1][-1] != types[-1][-2]:
+                                interaction = "Car-Bike"
+                            d = pos_vehicles2[-1][-2] - pos_vehicles2[-1][-1] - self.paras["length"][
+                                types[-1][-2]]
+                            center_distance = d + self.paras["length"][types[-1][-1]] / 2 + \
+                                              self.paras["length"][types[-1][-2]] / 2
+                            dmin = self.paras["dmin"][interaction]
+                            if center_distance < dmin:
+                                v_desired = 0
+                            elif dmin < center_distance < dmin + self.paras["max_spd"][type] / self.paras["k"][
+                                type]:
+                                v_desired = self.paras["k"][type] * (center_distance - dmin)
+                            else:  # (center_distance> )
+                                v_desired = self.paras["max_spd"][type]
+
+                            Fij = self.paras["Ai"][type] * math.e ** ((-d) / self.paras["Bi"][type]) * (-1)
+                            UM_acc = 1 / self.paras["mass"][type] * ((self.paras["mass"][type] * (
+                                        v_desired - self.next_spd[cars_lane[j]]) / 0.5) + Fij)
+                            speed = max(0, UM_acc * delta_T_faster + speed_vehicles2[-1][-1])
+                            # print(speed)
+                            speed = min(speed, self.paras["max_spd"][type])
+                            # print(speed)
+                            self.next_spd[cars_lane[j]] = speed
+                            # print(self.next_pos[cars_lane[j]])
+                            self.next_pos[cars_lane[j]] = min(-0.1, 1 / 2 * UM_acc * delta_T_faster ** 2 +
+                                                              speed_vehicles2[-1][-1] * delta_T_faster +
+                                                              pos_vehicles2[-1][-1])
+                            # print(self.next_pos[cars_lane[j]])
+
+
             for ind_lane in range(len(veh_id)):
                 for ind_veh in veh_id[ind_lane]:
                     if "bike" in ind_veh:
@@ -718,10 +745,15 @@ class SingleIntersection:
                         veh_len[ind_lane].append(self.paras["length"]["Car"])
                         minGap[ind_lane].append(self.paras["minGap"]["Car"])
 
+            # print(veh_id)
+            print(pos_vehicles2)
+            print(pos_vehicles)
+            print(speed_vehicles2)
+            print(speed_vehicles)
             self.network_state[inter_id] = {
                 "num_vehicles_max": num_vehicles_max,
-                "pos_vehicles": pos_vehicles2,
-                "speed_vehicles": speed_vehicles2,
+                "pos_vehicles": pos_vehicles,
+                "speed_vehicles": speed_vehicles,
                 "wt_vehicles": wt_vehicles,
                 "arrival_times": arrival_times,
                 "signal_phase": signal_phase,
@@ -749,6 +781,9 @@ class SingleIntersection:
             if should_update_signal:
                 if next_signal_phase == -1:
                     self.yellow_duration = self.paras["delta_T_faster"]
+                    # if self.paras["ped_phasing"] == "Exclusive" and cur_phase + self.network_graph[inter_id]["num_phases"] == self.paras["all_red_index"]:
+                    #     traci.trafficlight.setPhase(inter_id, cur_phase + self.network_graph[inter_id]["num_phases"]+1)
+                    # else:
                     traci.trafficlight.setPhase(inter_id, cur_phase + self.network_graph[inter_id]["num_phases"])
                 else:
                     traci.trafficlight.setPhase(inter_id, next_signal_phase)
@@ -756,6 +791,10 @@ class SingleIntersection:
             elif next_signal_phase == -1:
                 self.yellow_duration += self.paras["delta_T_faster"]
 
+            # if self.paras["ped_phasing"] == "Exclusive" and cur_phase == self.paras["all_red_index"] + 1:
+            #     if self.yellow_duration == 10:
+            #         traci.trafficlight.setPhase(inter_id, self.paras["all_red_index"])
+            # elif self.yellow_duration == self.paras["yellow_time"]:
             if self.yellow_duration == self.paras["yellow_time"]:
                 traci.trafficlight.setPhase(inter_id, self.paras["all_red_index"])
 
@@ -772,12 +811,15 @@ class SingleIntersection:
     def performance_results(self, phase_list_multi, duration_list_multi, network_type, volume_type, control_type, step):
         data_dir = os.path.dirname(os.path.realpath(__file__)) + "/simulation_data"
         data_dir_next = data_dir + "/" + network_type
-        queue_file = (data_dir_next + "/queues_" + control_type + "_" + volume_type + "_pene_" + str(int(self.paras["penetration"] * 100)) + ".xml")
-        tripinfo_file = (data_dir_next + "/tripinfo_" + control_type + "_" + volume_type + "_pene_" + str(int(self.paras["penetration"] * 100)) + ".xml")
+        queue_file = (data_dir_next + "/queues_" + control_type + "_pene_" + str(int(self.paras["penetration"] * 100)) + ".xml")
+        tripinfo_file = (data_dir_next + "/tripinfo_" + control_type + "_pene_" + str(int(self.paras["penetration"] * 100)) + ".xml")
+        SSMinfo_file = (data_dir_next + "/SSMinfo_" + control_type + "_pene_" + str(int(self.paras["penetration"] * 100)) + ".xml")
+
         self.get_average_delay_endtime(tripinfo_file)
         self.get_average_queue_length_endtime(queue_file)
         self.get_average_phase_duration(phase_list_multi, duration_list_multi, control_type)
         right_conflicts=self.right_turn_conflicts_measure()
+        conflict_cnt_BikeBike, conflict_cnt_BikeVeh, conflict_cnt_VehVeh = self.get_number_of_conflicts(SSMinfo_file, "1")
         print(f"average fuel consumption (external model) for CAVs {control_type} (in mg): ",
               self.fuel_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ice"]),1))
         print(f"average fuel consumption (external model) for HDVs {control_type} (in mg): ",
@@ -788,27 +830,18 @@ class SingleIntersection:
               self.power_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ev"]),1))
         # print(f"average fuel consumption (SUMO output) for {control_type} (in mg): ",
         #       self.fuel_total_cav_sumo / len(self.paras["cav_ids"]["all"]))
-        print(f"average waiting time for {control_type} (in s): ",
-              self.waiting_time_avg)
-        print(f"average time loss for {control_type} (in s): ",
-              self.lost_time_avg)
-        print(f"average queue for {control_type} length (in m): ",
-              self.queue_avg)
-        print(f"average bike (sep+int) waiting time for {control_type} (in s): ",
-              self.waiting_time_avg_bike)
-        print(f"average bike (sep+int) time loss for {control_type} (in s): ",
-              self.lost_time_avg_bike)
-        print(f"average bike queue (sep lane) for {control_type} length (in m): ",
-              self.queue_avg_bike)
-        print(f"average pedestrian time loss for {control_type} (in s): ",
-              self.lost_time_avg_ped)
+        print(f"average waiting time for {control_type} (in s): ", self.waiting_time_avg)
+        print(f"average time loss for {control_type} (in s): ", self.lost_time_avg)
+        print(f"average queue for {control_type} length (in m): ", self.queue_avg)
+        print(f"average bike (sep+int) waiting time for {control_type} (in s): ", self.waiting_time_avg_bike)
+        print(f"average bike (sep+int) time loss for {control_type} (in s): ", self.lost_time_avg_bike)
+        print(f"average bike queue (sep lane) for {control_type} length (in m): ", self.queue_avg_bike)
+        print(f"average pedestrian time loss for {control_type} (in s): ", self.lost_time_avg_ped)
         print(f"number of right-turn conflicts between vehicles and pedestrians: {right_conflicts}")
-        print(f"number of CAVs passing through the specific intersection for {control_type}: ",
-              len(self.paras["cav_ids"]))
-        print(f"number of pedestrians passing through the specific intersection for {control_type}: ",
-              len(self.paras["ped_ids"]))
-        print(f"number of bikes passing through the specific intersection (sep lane) for {control_type}: ",
-              len(self.paras["bike_ids"]))
+        print(f"number of conflicts between vehicles and cyclists: {conflict_cnt_BikeVeh}")
+        print(f"number of CAVs passing through the specific intersection for {control_type}: ", len(self.paras["cav_ids"]))
+        print(f"number of pedestrians passing through the specific intersection for {control_type}: ", len(self.paras["ped_ids"]))
+        print(f"number of bikes passing through the specific intersection (sep lane) for {control_type}: ", len(self.paras["bike_ids"]))
         print(f"The time of simulation termination in {control_type} scenario:",step/2)
 
 
@@ -816,20 +849,20 @@ class SingleIntersection:
             a = "LowPed"
         elif self.paras["poisson_gamma_pedestrian"] == 0.04:
             a = "MedPed"
-        elif self.paras["poisson_gamma_pedestrian"] == 0.08:
+        elif self.paras["poisson_gamma_pedestrian"] == 0.07:
             a = "HighPed"
 
-        if self.paras["poisson_gamma_pedestrian"] == 0.01:
+        if self.paras["poisson_gamma_bike"] == 0.01:
             b = "LowBike"
-        elif self.paras["poisson_gamma_pedestrian"] == 0.02:
+        elif self.paras["poisson_gamma_bike"] == 0.02:
             b = "MedBike"
-        elif self.paras["poisson_gamma_pedestrian"] == 0.04:
+        elif self.paras["poisson_gamma_bike"] == 0.03:
             b = "HighBike"
         else:
             raise
 
         if control_type == "multi_scale":
-            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["weight(Vehicles/Pedestrians)"]}_{a}.txt"
+            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["weight(Vehicles/Pedestrians/Bikes)"]}_{a}.txt"
         else:
             file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{a}.txt"
         with open(file_name, 'w') as file:
@@ -847,12 +880,63 @@ class SingleIntersection:
             file.write(f"average bike (sep) queue length for {control_type} scenario (in m): {self.queue_avg_bike}\n")
             file.write(f"average pedestrian time loss for {control_type} scenario (in s): {self.lost_time_avg_ped}\n")
             file.write(f"number of right-turn conflicts between vehicles and pedestrians: {right_conflicts}\n")
+            file.write(f"number of conflicts between vehicles and cyclists: {conflict_cnt_BikeVeh}\n")
             file.write(f"number of CAVs passing through the specific intersection in {control_type} scenario: {len(self.paras['cav_ids'])}\n")
             file.write(f"number of pedestrians passing through the specific intersection in {control_type} scenario: {len(self.paras['ped_ids'])}\n")
             file.write(f"number of Bikes passing through the specific intersection (sep) in {control_type} scenario: {len(self.paras["bike_ids"])}\n")
             file.write(f"The time of simulation termination in {control_type} scenario: {step/2}\n")
             file.write(f"average phase lengths:  {self.phase_avg}\n")
             file.write(f"number of times each phase happened: {self.phase_ntimes}\n")
+
+
+    def get_number_of_conflicts(self, file, inter_id):
+        ## Start SUMO again for the needed traci function.
+        model_file = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + f"/environment/network_model/single_intersection_multi_scale_Concurrent.sumocfg"
+        traci.start(["sumo", "-c",  model_file, "--start" ])
+
+        tree = ET.parse(file)
+        root = tree.getroot()
+        conflict_cnt_BikeVeh=0
+        conflict_cnt_BikeBike=0
+        conflict_cnt_VehVeh=0
+
+        cntt=0
+        for conflict in root.findall('.//conflict'):
+            cntt += 1
+            ego = conflict.attrib['ego']
+            foe = conflict.attrib['foe']
+            for measure in conflict:
+                position = measure.attrib.get("position")
+                if position != "NA" and measure.tag == "minTTC":
+                    x, y = map(float, position.split(','))
+                    edgeID, lanePosition, laneIndex = traci.simulation.convertRoad(x, y, isGeo=False)
+                    out_edge_ids= [x[:-2] for x in self.paras["network_graph"][inter_id]["outgoing_veh"].keys()]
+                    if edgeID not in out_edge_ids:
+                        if "bike" in foe and "bike" in ego:
+                            conflict_cnt_BikeBike += 1
+                        elif "bike" in foe or "bike" in ego:
+                            conflict_cnt_BikeVeh += 1
+                        else:
+                            conflict_cnt_VehVeh += 1
+                        break
+
+                elif position != "NA" and measure.tag == "PET":
+                    x, y = map(float, position.split(','))
+                    edgeID, lanePosition, laneIndex = traci.simulation.convertRoad(x, y, isGeo=False)
+                    out_edge_ids= [x[:-2] for x in self.paras["network_graph"][inter_id]["outgoing_veh"].keys()]
+                    if edgeID not in out_edge_ids:
+                        if "bike" in foe and "bike" in ego:
+                            conflict_cnt_BikeBike += 1
+                        elif "bike" in foe or "bike" in ego:
+                            conflict_cnt_BikeVeh += 1
+                        else:
+                            conflict_cnt_VehVeh += 1
+                        break
+
+        traci.close()
+        return int(conflict_cnt_BikeBike), int(conflict_cnt_BikeVeh), int(conflict_cnt_VehVeh)
+
+
 
     def right_turn_conflicts_measure(self):
         a=0
@@ -932,9 +1016,9 @@ class SingleIntersection:
         #print("max wt: ", wt_max)
         self.waiting_time_avg = wt / cnt
         self.lost_time_avg = tl / cnt
-        self.lost_time_avg_ped = tl_ped / cnt_ped
-        self.lost_time_avg_bike = tl_bike / cnt_bike
-        self.waiting_time_avg_bike = wt_bike / cnt_bike
+        self.lost_time_avg_ped = tl_ped / max(1,cnt_ped)
+        self.lost_time_avg_bike = tl_bike / max(1,cnt_bike)
+        self.waiting_time_avg_bike = wt_bike / max(1,cnt_bike)
 
 
     def get_average_queue_length_endtime(self, file):

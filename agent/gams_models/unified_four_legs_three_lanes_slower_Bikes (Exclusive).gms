@@ -111,7 +111,7 @@ I guess g here is not same as in the paper. 1 if passed, 0 if did not pass.
 
 you can add pedestrian delay too if this enough did not work
 $offtext
-cost..                                                                           f =e= Wv*[f_throughput + f_dist/100 + f_transit*5 + f_delay/50] + Wb*[5*f_bike_throughput]+ Wp*[5*f_ped_throughput/5];
+cost..                                                                           f =e= Wv*[f_throughput + f_dist/100 + f_transit*5 + f_delay/50] + Wb*[5*f_bike_throughput]+ Wp*[5*f_ped_throughput]*1.05;
 cost_throughput..                                                                f_throughput =e= sum(vehicle_indi(i,j), sum(k, (1-g(i,j,k))));
 cost_distance..                                                                  f_dist =e= -sum(vehicle_indi(i,j), sum(k, (s(i,j,k) - s_init(i,j))*gamma(k))) / sum(i, sum(j, vehicle_indi(i,j)));
 cost_transition..                                                                f_transit =e= sum(l, sum(k, p_c(l,k)));
@@ -195,21 +195,6 @@ model mo /cost, cost_throughput, cost_distance, cost_transition, cost_delay, cos
 *model mo /cost, cost_throughput, cost_distance, cost_transition, cost_delay, cost_ped_throughput, cost_bike_throughput, vehicle_dynamics_1, vehicle_dynamics_2, vehicle_position_1, vehicle_position_2, traffic_rule, signal_rule_1, signal_rule_2, signal_rule_3,signal_rule_4, phase_equal_1, phase_equal_2, phase_equal_3, phase_equal_4, phase_equal_5, phase_equal_6, phase_equal_7, phase_equal_8, phase_equal_9, phase_equal_10, phase_equal_11, phase_equal_12, ped_phase_equal_1, ped_phase_equal_2, ped_phase_equal_3, ped_phase_equal_4, ped_phase_equal_5, ped_phase_equal_6, bike_phase_equal_1, bike_phase_equal_2, bike_phase_equal_3, bike_phase_equal_4/;
 
 
-*q.l('1','2')=EW;
-*q.l('3','2')=EW;
-*q.l('2','2')=NS;
-*q.l('4','2')=NS;
-
-*p.fx('9','1')=0;
-*p.fx('9','2')=0;
-*p.fx('9','3')=0;
-*p.fx('9','4')=0;
-*p.fx('9','5')=0;
-*p.fx('9','6')=0;
-*p.fx('9','7')=0;
-
-*p.fx('5','2')=NS;
-*p.fx('1','2')=EW;
 *option optcr=0;
 *option minlp=BONMIN;
 mo.optfile = 1;

@@ -72,7 +72,7 @@ fuel_consumption_ice(i,k)$(veh_ice(i) ne 0)..                                   
 fuel_consumption_ice_2(i,k)$(veh_ice(i) ne 1)..                                  f_inst_ice(i,k) =e= 0;
 
 *Equation (25e)
-a.up(i,k) = 4;
+a.up(i,k) = 5;
 a.lo(i,k) = -5;
 v.up(i,k) = 11;
 v.lo(i,k) = 0;

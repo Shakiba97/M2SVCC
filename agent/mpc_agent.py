@@ -89,12 +89,12 @@ class MpcAgent:
                         green_lanes = []
                         green_crossings = []
                         # Iterate over signal states and match with controlled links
-                        for i, state in enumerate(signal_state[:-1]):
+                        for i, state in enumerate(signal_state):
                             if state == 'G' and i < len(controlled_links):  # Ensure index is valid
                                 all_red = False
                                 for link_tuple in controlled_links[i]:  # Each entry is (incoming_lane, outgoing_lane, crossing)
-                                    print(link_tuple)
-                                    print(controlled_links[i])
+                                    # print(link_tuple)
+                                    # print(controlled_links[i])
                                     incoming_lane = link_tuple[0]
                                     crossing = traci.lane.getEdgeID(link_tuple[1])
                                     # Store vehicle lanes and pedestrian crossings
@@ -103,9 +103,11 @@ class MpcAgent:
                                         green_crossings.append(crossing)
                                     if incoming_lane in self.paras["network_graph"][inter_id]["incoming_veh"].keys():
                                         green_lanes.append(incoming_lane)
+                            elif state=='g':
+                                all_red = False
                         if all_red:
                             self.paras["all_red_index"] = index
-                        if self.paras["ped_phasing"]=="Exclusive" and len(green_crossings) == len(self.paras["network_graph"][inter_id]["crossing"].keys()):
+                        if (self.paras["ped_phasing"]=="Exclusive" or self.paras["ped_phasing"]=="Hybrid") and len(green_crossings) == len(self.paras["network_graph"][inter_id]["crossing"].keys()):
                             self.exclusive_phase_ind=index
                         self.ped_phase_map[index] = green_crossings
                         self.veh_phase_map[index] = green_lanes
@@ -319,7 +321,7 @@ class MpcAgent:
         self.model_slower = self.ws.add_job_from_file(self.gams_file_slower)
         opt_slower = self.ws.add_options()
         opt_slower.defines["gdxincname"] = self.db_slower.name
-        print(self.db_slower.name)
+        # print(self.db_slower.name)
         self.model_slower.run(opt_slower, databases=self.db_slower)
         if self.model_slower.out_db["model_status"][()].value not in [1, 2, 8]:
             print(self.model_slower.out_db.name)
@@ -361,11 +363,19 @@ class MpcAgent:
         #print("f_ped_throughput: ", sum(self.f_ped_throughput)/len(self.f_ped_throughput))
         for item in self.model_slower.out_db["f_bike_throughput"]:
             self.f_bike_throughput.append(item.level)
+
+        # print(self.f_throughput[-1] + self.f_dist[-1]/100 + self.f_transit[-1]*5 + self.f_delay[-1]/50)
+        # print(self.f_ped_throughput[-1]*5/5)
+        # print(self.f_bike_throughput[-1]*5)
         #
-        # Vehicle_cost=sum(self.f_throughput)/len(self.f_throughput) + sum(self.f_dist)/len(self.f_dist)/100 + sum(self.f_transit)/len(self.f_transit)*5 + sum(self.f_delay)/len(self.f_delay)/50
-        # Pedestrian_cost=sum(self.f_ped_throughput)/len(self.f_ped_throughput)*5
-        # print(Vehicle_cost)
-        # print(Pedestrian_cost)
+        Vehicle_cost=sum(self.f_throughput)/len(self.f_throughput) + sum(self.f_dist)/len(self.f_dist)/100 + sum(self.f_transit)/len(self.f_transit)*5 + sum(self.f_delay)/len(self.f_delay)/50
+        Pedestrian_cost=sum(self.f_ped_throughput)/len(self.f_ped_throughput)*5
+        Bike_cost=sum(self.f_bike_throughput)/len(self.f_bike_throughput)*5
+
+        print("Vehicle_cost: ", Vehicle_cost)
+        print("Pedestrian_cost: ", Pedestrian_cost)
+        print("Bike_cost: ", Bike_cost)
+
         #
         # self.ped_times_veh.append(Pedestrian_cost/Vehicle_cost)
         # print("Vehicle Cost: ", sum(self.f_throughput)/len(self.f_throughput) +
@@ -396,7 +406,7 @@ class MpcAgent:
 
         current_phase=traci.trafficlight.getPhase(inter_id)
         if following_phases[0] == -1:
-            if self.paras["ped_phasing"]=="Exclusive" and current_phase == self.exclusive_phase_ind:
+            if (self.paras["ped_phasing"]=="Exclusive" or self.paras["ped_phasing"]=="Hybrid") and current_phase == self.exclusive_phase_ind:
                 prv_step = self.next_global_step_to_re_solve_the_netwok
                 for cross in self.paras["network_graph"][inter_id]["crossing"]:
                     if self.paras["network_graph"][inter_id]["crossing"][cross]["phasing"]=="Diagonal":
@@ -417,7 +427,7 @@ class MpcAgent:
                 self.extension_steps = 1
         else:
             # check for pedestrian extension:
-            if self.paras["ped_phasing"]=="Exclusive":
+            if self.paras["ped_phasing"]=="Exclusive" or self.paras["ped_phasing"]=="Hybrid" :
                 Gp = 0
                 next = following_phases[0]
 
@@ -433,7 +443,7 @@ class MpcAgent:
                                 crossing_width = self.paras["network_graph"][inter_id]["crossing"][cross]["width"]
                                 minimum_green = 3.2 + crossing_length / self.paras['ped_speed'] + 2.7 * ped_demand[cross] / (crossing_width * 3.28)
                                 Gp = max(Gp, minimum_green)
-                        print("Gp: ", Gp)
+                        # print("Gp: ", Gp)
                         self.extension_steps = max(int(Gp / self.delta_T)-4, 1)
                         ## I subtracted by 4 because we are implementing this effect on all-red instead (equivalant to controling the pedestrian behavior and force them too stop when there is not much time left)
 
@@ -442,7 +452,7 @@ class MpcAgent:
                     Gp = 0
                     # Gp = min(Gp, 20)
                     # print("ultimate Gp: ", Gp)
-                print("extension steps: ", self.extension_steps)
+                # print("extension steps: ", self.extension_steps)
                 prv_step = self.next_global_step_to_re_solve_the_netwok
                 self.next_global_step_to_re_solve_the_netwok += int(
                     self.delta_T / self.delta_T_faster
@@ -467,7 +477,7 @@ class MpcAgent:
                             crossing_width = self.paras["network_graph"][inter_id]["crossing"][cross]["width"]
                             minimum_green = 3.2 + crossing_length / self.paras['ped_speed'] + 2.7 * ped_demand[cross] / (crossing_width * 3.28)
                             Gp = max(Gp, minimum_green)
-                    #print("Gp: ", Gp)
+                    # print("Gp: ", Gp)
                     # Gp= 0
                     self.extension_steps = max(int(Gp / self.delta_T), 1)
 
@@ -475,7 +485,7 @@ class MpcAgent:
                     Gp = 0
                     # Gp = min(Gp, 20)
                     # print("ultimate Gp: ", Gp)
-                print("extension steps: ", self.extension_steps)
+                # print("extension steps: ", self.extension_steps)
                 prv_step = self.next_global_step_to_re_solve_the_netwok
                 self.next_global_step_to_re_solve_the_netwok += int(
                     max(self.delta_T, Gp) / self.delta_T_faster

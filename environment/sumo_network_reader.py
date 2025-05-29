@@ -93,7 +93,7 @@ class SumoNetworkReader:
                 for phase in element.findall("phase"):
                     if "G" in phase.attrib["state"]:
                         num_phases += 1
-                self.network_graph[inter_id]["num_phases"] = num_phases
+                self.network_graph[inter_id]["num_phases"] = min(9, num_phases) ## TODO: generalize later
 
         # find walking areas and crossings adjacent:
         for inter_id in self.network_graph:
@@ -103,7 +103,7 @@ class SumoNetworkReader:
                         cross_shape = tuple(map(float, cross_shape.split(',')))
                         for walk_shape in self.network_graph[inter_id]["walkingarea"][walkingarea]["shape"]:
                             walk_shape = tuple(map(float, walk_shape.split(',')))
-                            if ((cross_shape[0]-walk_shape[0])**2+(cross_shape[1]-walk_shape[1])**2)**0.5 < 2:
+                            if ((cross_shape[0]-walk_shape[0])**2+(cross_shape[1]-walk_shape[1])**2)**0.5 < 4:
                                 self.network_graph[inter_id]["walkingarea"][walkingarea].setdefault("adjacent", set())
                                 self.network_graph[inter_id]["walkingarea"][walkingarea]["adjacent"].add(crossing)
 

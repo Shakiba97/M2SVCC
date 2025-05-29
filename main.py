@@ -22,6 +22,7 @@ def main(network_type, volume_type, control_type):
     phase_list_multi = []
     duration_list_multi = []
     step = 0
+    # while step <100:
     while env_single_intersection.is_active():
 
         print(f"----Get network state at step {step}")
@@ -38,10 +39,9 @@ def main(network_type, volume_type, control_type):
                 should_update_signal, next_signal_phase, speed_commands
             )
 
-        elif control_type == "actuated":
-            for inter_id in network_state.keys():
-                env_single_intersection.pedestrian_actuation(inter_id)
-                ## Apparently the actuation does not get activated (why?)
+        # elif control_type == "actuated":
+        #     for inter_id in network_state.keys():
+        #         env_single_intersection.pedestrian_actuation(inter_id)
 
             #env_single_intersection.pedestrian_movement_control()
         env_single_intersection.calculate_extra_metrics()

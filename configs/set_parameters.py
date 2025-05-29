@@ -19,7 +19,7 @@ def set_common_paras(paras):
     # Discount ratio used to stabilize the MPC problem.
     paras["discount_ratio"] = 0.95
     # weighting factor for each mode (for the slower scale problem optimization)(must add up to 1)
-    paras["weight(Vehicles/Pedestrians/Bikes)"] = (0.3, 0.3, 0.3)
+    paras["weight(Vehicles/Pedestrians/Bikes)"] = (0.39, 0.3, 0.3)
 
     ## IDM model parameters, see Equation (11) in the second paper.
     # Maximum acceleration that the vechiles can reach, in m/s^{2}.
@@ -32,18 +32,18 @@ def set_common_paras(paras):
     paras["delta_idm"] = 4
 
     # Unified Model parameters:
-    paras["max_spd"] = {"Car": 13, "Bike": 6}
+    paras["max_spd"] = {"Car": 13, "Bike": 5}
     paras["k"] = {"Car": 1.89, "Bike": 1.09}
     paras["mass"] = {"Car": 1500, "Bike": 10}
     paras["Ai"] = {"Car": 2000, "Bike": 500}
     paras["Bi"] = {"Car": 0.08, "Bike": 0.08}
-    paras["dmin"] = {"Car": 12, "Bike": 2.2}
+    paras["dmin"] = {"Car": 8, "Bike": 2.2, "Car-Bike": 5.1}
 
     ## Simulation parameters.
     # Penetration rate of CAVs.
     paras["penetration"] = 1
     # Concurrent or Exclusive Pedestrian phasing
-    paras["ped_phasing"] = "Concurrent" #"Concurrent" or "Exclusive" or "hybrid" (bike concur ped excl)
+    paras["ped_phasing"] = "Concurrent" #"Exclusive" or "Concurrent" or "Hybrid" (bike concur ped excl)
     # Random seed used to generate the volume.
     paras["random_seed"] = 1
     # simulation duration.
@@ -51,9 +51,12 @@ def set_common_paras(paras):
     # Simulation steps.
     paras["simulation_steps"] = paras["simulation_duration"] // paras["delta_T"]
     # Signal yellow time added between conflicting phases.
-    if paras["ped_phasing"] == "Concurrent" or paras["ped_phasing"]=="hybrid":
-        paras["yellow_time"] = 5
-        paras["all_red_time"] = 2
+    if paras["ped_phasing"] == "Concurrent":
+        paras["yellow_time"] = 3
+        paras["all_red_time"] = 5
+    elif paras["ped_phasing"] == "Hybrid":
+        paras["yellow_time"] = 3
+        paras["all_red_time"] = 5
     else:
         paras["yellow_time"] = 3
         paras["all_red_time"] = 0
@@ -75,10 +78,10 @@ def set_common_paras(paras):
     # Left turn and right turn ratios. We only explicitly set the main road, i,e, through traffic, volumes. The volume of other movements are set as ratios to their main movements.
     paras["left_right_ratio"] = 1 / 6
     # Ratio of Electric Vehicles (between 0 and 1)
-    paras["ratio_ev"] = 1
+    paras["ratio_ev"] = 0
     # Poisson gamma for pedestrian demand
-    paras["poisson_gamma_pedestrian"] = 0.04 # high:0.08 medium=0.04 low=0.01
-    paras["poisson_gamma_bike"] = 0.02 # high:0.04 medium=0.02 low=0.01
+    paras["poisson_gamma_pedestrian"] = 0.07 # high:0.07 medium=0.04 low=0.01
+    paras["poisson_gamma_bike"] = 0.03 # high:0.03 medium=0.02 low=0.01
     paras["ped_demand_symmetry"] = "Asymmetric" # Asymmetric or Symmetric pedestrian demand
 
     ## pedestrian parameters:

@@ -53,9 +53,14 @@ class SumoRoutesGenerator:
         with open(file_name, "w") as routes:
             print(
                 f"""<routes>
-            <vType id="cars" accel="3" decel="5" sigma="1" length="5" minGap="2" maxSpeed="13" \
-            guiShape="passenger"/>
-            <vType id="bike" vClass="bicycle"/>
+            <vType id="cars" accel="3" decel="5" sigma="1" length="5" minGap="2" maxSpeed="13" guiShape="passenger">
+                    <param key="has.ssm.device" value="true"/>
+                    <param key="device.ssm.measures" value="TTC DRAC PET BR SGAP TGAP PPET MDRAC"/>
+                    <param key="device.ssm.thresholds" value="2.0 3.0 2.0 0.0 0.2 0.5 2.0 3.4"/>
+            </vType>
+            <vType id="bike" vClass="bicycle">
+                    <param key="has.ssm.device" value="true"/>
+            </vType>
 
             <route id="WE" edges="2_1 1_4" />
             <route id="WN" edges="2_1 1_5" />
@@ -114,33 +119,30 @@ class SumoRoutesGenerator:
             </personFlow>      
                
             
-            <flow id="WE-bike"  begin="0" end= "900" period="exp({poisson_gamma_bike*division[0]})" type="bike" route="WE" departLane="random">
+            <flow id="WE-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[0]*4/6})" type="bike" route="WE" departLane="random">
             </flow>
-            <flow id="WS-bike"  begin="0" end= "900" period="exp({poisson_gamma_bike*division[0]*1/6})" type="bike" route="WS" departLane="random">
+            <flow id="WS-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[0]*1/6})" type="bike" route="WS" departLane="random">
             </flow>
-            <flow id="NS-bike"  begin="0" end= "900" period="exp({poisson_gamma_bike*division[2]})" type="bike" route="NS">
+            <flow id="NS-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[2]*4/6})" type="bike" route="NS" departLane="random">
             </flow>
-            <flow id="NW-bike"  begin="0" end= "900" period="exp({poisson_gamma_bike*division[2]*1/6})" type="bike" route="NW">
+            <flow id="NW-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[2]*1/6})" type="bike" route="NW" departLane="random">
             </flow>
-            <flow id="EW-bike"  begin="0" end= "900" period="exp({poisson_gamma_bike*division[1]})" type="bike" route="EW">
+            <flow id="EW-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[1]*4/6})" type="bike" route="EW" departLane="random">
             </flow>
-            <flow id="EN-bike"  begin="0" end= "900" period="exp({poisson_gamma_bike*division[1]*1/6})" type="bike" route="EN">
+            <flow id="EN-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[1]*1/6})" type="bike" route="EN" departLane="random">
             </flow>
-            <flow id="SN-bike"  begin="0" end= "900" period="exp({poisson_gamma_bike*division[3]})" type="bike" route="SN">
+            <flow id="SN-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[3]*4/6})" type="bike" route="SN" departLane="random">
             </flow>
-            <flow id="SE-bike"  begin="0" end= "900" period="exp({poisson_gamma_bike*division[3]*1/6})" type="bike" route="SE">
+            <flow id="SE-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[3]*1/6})" type="bike" route="SE" departLane="random">
             </flow>          
-                  
-            <!-- 
-            <flow id="WN-bike"  begin="0" end= "900" period="exp({poisson_gamma_bike*division[0]*1/6})" type="bike" route="WN">
+            <flow id="WN-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[1]*1/12})" type="bike" route="WN" departLane="4">
             </flow> 
-            <flow id="NE-bike"  begin="0" end= "900" period="exp({poisson_gamma_bike*division[2]*1/6})" type="bike" route="NE">
+            <flow id="NE-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[2]*1/12})" type="bike" route="NE" departLane="4">
             </flow>
-            <flow id="ES-bike"  begin="0" end= "900" period="exp({poisson_gamma_bike*division[1]*1/6})" type="bike" route="ES">
+            <flow id="ES-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[1]*1/12})" type="bike" route="ES" departLane="4">
             </flow> 
-            <flow id="SW-bike"  begin="0" end= "900" period="exp({poisson_gamma_bike*division[3]*1/6})" type="bike" route="SW">
+            <flow id="SW-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[3]*1/12})" type="bike" route="SW" departLane="4">
             </flow>
-            -->
             
             
    

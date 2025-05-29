@@ -111,7 +111,7 @@ I guess g here is not same as in the paper. 1 if passed, 0 if did not pass.
 
 you can add pedestrian delay too if this enough did not work
 $offtext
-cost..                                                                           f =e= Wv*[f_throughput + f_dist/100 + f_transit*5 + f_delay/50] + Wb*[5*f_bike_throughput]+ Wp*[5*f_ped_throughput/5];
+cost..                                                                           f =e= Wv*[f_throughput + f_dist/100 + f_transit*5 + f_delay/50] + Wb*[5*f_bike_throughput] + Wp*[5*f_ped_throughput];
 cost_throughput..                                                                f_throughput =e= sum(vehicle_indi(i,j), sum(k, (1-g(i,j,k))));
 cost_distance..                                                                  f_dist =e= -sum(vehicle_indi(i,j), sum(k, (s(i,j,k) - s_init(i,j))*gamma(k))) / sum(i, sum(j, vehicle_indi(i,j)));
 cost_transition..                                                                f_transit =e= sum(l, sum(k, p_c(l,k)));
