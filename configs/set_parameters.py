@@ -19,7 +19,7 @@ def set_common_paras(paras):
     # Discount ratio used to stabilize the MPC problem.
     paras["discount_ratio"] = 0.95
     # weighting factor for each mode (for the slower scale problem optimization)(must add up to 1)
-    paras["weight(Vehicles/Pedestrians/Bikes)"] = (0.39, 0.3, 0.3)
+    paras["weight(Vehicles/Pedestrians/Bikes)"] = (0.36, 0.3, 0.3)
 
     ## IDM model parameters, see Equation (11) in the second paper.
     # Maximum acceleration that the vechiles can reach, in m/s^{2}.
@@ -53,10 +53,10 @@ def set_common_paras(paras):
     # Signal yellow time added between conflicting phases.
     if paras["ped_phasing"] == "Concurrent":
         paras["yellow_time"] = 3
-        paras["all_red_time"] = 5
+        paras["all_red_time"] = 2  ##TODO: put a following no pedestrian and bike phase of 3 seconds + LBI of 5 seconds (subtract form extension)
     elif paras["ped_phasing"] == "Hybrid":
         paras["yellow_time"] = 3
-        paras["all_red_time"] = 5
+        paras["all_red_time"] = 2  ##TODO: put a following no pedestrian phase of 3 seconds + LBI of 5 seconds
     else:
         paras["yellow_time"] = 3
         paras["all_red_time"] = 0
