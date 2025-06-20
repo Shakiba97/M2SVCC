@@ -89,6 +89,8 @@ class SumoNetworkReader:
                 for phase in element.findall("phase"):
                     if "g" in phase.attrib["state"] or "G" in phase.attrib["state"]:
                         num_phases += 1
+                    else:
+                        break
                 self.network_graph[inter_id]["num_phases"] = num_phases
 
         # find walking areas and crossings adjacent:

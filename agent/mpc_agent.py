@@ -343,7 +343,7 @@ class MpcAgent:
         # print("pedestrian Cost: ",  sum(self.f_ped_throughput)/len(self.f_ped_throughput)*5)
         # print("Mean of ped times veh values: ", sum(self.ped_times_veh)/len(self.ped_times_veh))
         print("Vehicle cost at this point: ", self.f_throughput[-1]+self.f_dist[-1]/100+self.f_transit[-1]*5+self.f_delay[-1]/50)
-        print("Pedestrian cost at this point: ", self.f_ped_throughput[-1]*5)
+        print("Pedestrian cost at this point: ", self.f_ped_throughput[-1]*5/40)
         print("objective function at this point:", self.f[-1])
 
         for rec in self.model_slower.out_db["p"]:
@@ -363,6 +363,7 @@ class MpcAgent:
                 following_phases.append(-1)
 
         current_phase=traci.trafficlight.getPhase(inter_id)
+        print(following_phases)
         if following_phases[0] == -1:
             if self.paras["ped_phasing"]=="Exclusive" and current_phase == self.exclusive_phase_ind:
                 prv_step = self.next_global_step_to_re_solve_the_netwok
@@ -377,12 +378,20 @@ class MpcAgent:
                 self.is_extended = False
                 self.extension_steps = 1
             else:
-                prv_step = self.next_global_step_to_re_solve_the_netwok
-                self.next_global_step_to_re_solve_the_netwok += int(
-                    (self.yellow_time+self.all_red_time) / self.delta_T_faster
-                )
-                self.is_extended = False
-                self.extension_steps = 1
+                if self.paras["ped_phasing"] == "Exclusive":
+                    prv_step = self.next_global_step_to_re_solve_the_netwok
+                    self.next_global_step_to_re_solve_the_netwok += int(
+                        (self.yellow_time+self.all_red_time) / self.delta_T_faster
+                    )
+                    self.is_extended = False
+                    self.extension_steps = 1
+                else:
+                    prv_step = self.next_global_step_to_re_solve_the_netwok
+                    self.next_global_step_to_re_solve_the_netwok += int(
+                        (self.yellow_time+self.all_red_time+self.paras["ped_FDW"]) / self.delta_T_faster
+                    )
+                    self.is_extended = False
+                    self.extension_steps = 1
         else:
             # check for pedestrian extension:
             if self.paras["ped_phasing"]=="Exclusive":
@@ -433,13 +442,13 @@ class MpcAgent:
                             # print(f"pedestrian demand for {dir} direction is:", ped_demand[dir])
                             crossing_length = self.paras["network_graph"][inter_id]["crossing"][cross]["length"]
                             crossing_width = self.paras["network_graph"][inter_id]["crossing"][cross]["width"]
-                            minimum_green = 3.2 + crossing_length / self.paras['ped_speed'] + 2.7 * ped_demand[cross] / (crossing_width * 3.28)
+                            minimum_green = 3.2 + crossing_length / self.paras['ped_speed'] + 2.7 * ped_demand[cross] / (crossing_width * 3.28) - self.paras["yellow_time"] - self.paras["all_red_time"] - self.paras["ped_FDW"]
                             Gp = max(Gp, minimum_green)
                     #print("Gp: ", Gp)
                     # Gp= 0
                     self.extension_steps = max(int(Gp / self.delta_T), 1)
-
-                    #print("extension steps just calculated: ", self.extension_steps)
+                    # I subtracted 5 seconds of FDW time: (3.2*5 - 7 (WALK) - 3(yellow) -1 (all-red) = 5)
+                    print("extension steps just calculated: ", self.extension_steps)
                     Gp = 0
                     # Gp = min(Gp, 20)
                     # print("ultimate Gp: ", Gp)

@@ -62,6 +62,8 @@ class SingleIntersection:
         self.cur_phase = {}
         self.previous_phase = {}
         self.yellow_duration=0
+        self.noWALK=0
+        self.clearance = False
         self.phase_avg = None
         self.phase_ntimes = None
         self.right_turn_conflicts = {}
@@ -451,16 +453,26 @@ class SingleIntersection:
             # Signal phase control
             if should_update_signal:
                 if next_signal_phase == -1:
-                    self.yellow_duration = self.paras["delta_T_faster"]
-                    traci.trafficlight.setPhase(inter_id, cur_phase + self.network_graph[inter_id]["num_phases"])
+                    self.noWALK += self.paras["delta_T_faster"]
+                    traci.trafficlight.setPhase(inter_id, cur_phase + 2*self.network_graph[inter_id]["num_phases"])
+                    self.clearance = True
                 else:
                     traci.trafficlight.setPhase(inter_id, next_signal_phase)
                     self.yellow_duration = 0
             elif next_signal_phase == -1:
-                self.yellow_duration += self.paras["delta_T_faster"]
+                if self.clearance:
+                    self.noWALK += self.paras["delta_T_faster"]
+                else:
+                    self.yellow_duration += self.paras["delta_T_faster"]
+                    self.noWALK=0
 
             if self.yellow_duration == self.paras["yellow_time"]:
                 traci.trafficlight.setPhase(inter_id, self.paras["all_red_index"])
+
+            if self.noWALK == self.paras["ped_FDW"] + self.paras["delta_T_faster"]:
+                traci.trafficlight.setPhase(inter_id, cur_phase - self.network_graph[inter_id]["num_phases"])
+                self.clearance = False
+                self.yellow_duration += self.paras["delta_T_faster"]
 
             # Vehicles control
             network_vehs = traci.vehicle.getIDList()
@@ -511,7 +523,7 @@ class SingleIntersection:
             a = "LowPed"
         elif self.paras["poisson_gamma_pedestrian"] == 0.04:
             a = "MedPed"
-        elif self.paras["poisson_gamma_pedestrian"] == 0.08:
+        elif self.paras["poisson_gamma_pedestrian"] == 0.07:
             a = "HighPed"
         else:
             raise
@@ -707,10 +719,10 @@ class SingleIntersection:
             self.greenTimeSofar.setdefault(inter_id,0)
             self.greenTimeSofar[inter_id] = 0
         logic = traci.trafficlight.getCompleteRedYellowGreenDefinition(inter_id)
-        Vehicle_Phases = [0, 2, 4, 6]
+        Vehicle_Phases = [0, 4, 7, 11]
         ped_demand={}
         Gp=0
-        ped_phase_map = {0: ['E', "W"], 2: [], 4: ['N', 'S'], 6: []}
+        ped_phase_map = {0: ['E', "W"], 4: [], 7: ['N', 'S'], 11: []}
         for d in self.cross_map.keys():
             ped_demand[self.cross_map[d]] = len(self.network_state[inter_id]['pedestrian_demand_current'][d])
 
@@ -763,8 +775,8 @@ class SingleIntersection:
     def checkPresentPersons(self,inter_id):
         current_phase_extension = False
         opposite_phase_delay = False
-        ped_demand={0: 0, 2: 0, 4: 0, 6: 0}
-        ped_phase_map = {0: ['E', "W"], 2: [], 4: ['N', 'S'], 6: []}
+        ped_demand={0: 0, 4: 0, 7: 0, 11: 0}
+        ped_phase_map = {0: ['E', "W"], 4: [], 7: ['N', 'S'], 11: []}
         ## the plan is to extend the phase if there are any pedestrian for the current phase but not if the opposing phase is facing too much pedestrian delay
         for walking_area in self.network_graph[inter_id]["walkingarea"].keys():
             peds=traci.edge.getLastStepPersonIDs(walking_area)
@@ -775,10 +787,10 @@ class SingleIntersection:
                     if next_edge in self.cross_map.keys() and self.cross_map[next_edge] == dir:
                         ped_demand[self.cur_phase[inter_id]] += 1
                         current_phase_extension = True
-                opposite_directions = ped_phase_map[(self.cur_phase[inter_id]+4)%8]
+                opposite_directions = ped_phase_map[(self.cur_phase[inter_id]+7)%14]
                 for opposite_dir in opposite_directions: # check delay-based termination according to opposite phase
                     if next_edge in self.cross_map.keys() and self.cross_map[next_edge] == opposite_dir:
-                        ped_demand[(self.cur_phase[inter_id] + 4) % 8] += 1
+                        ped_demand[(self.cur_phase[inter_id] + 7) % 14] += 1
                         if traci.person.getWaitingTime(ped)>=25:  # if the pedestrians on the opposite phase are waiting for at least 15s, don't do the extension
                             #print("delay: ", traci.person.getWaitingTime(ped))
                             opposite_phase_delay = True
