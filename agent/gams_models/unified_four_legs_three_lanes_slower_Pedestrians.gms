@@ -99,7 +99,7 @@ I guess g here is not same as in the paper. 1 if passed, 0 if did not pass.
 
 you can add pedestrian delay too if this enough did not work
 $offtext
-cost..                                                                           f =e= Wv*[f_throughput + f_dist/100 + f_transit*5 + f_delay/50] + Wp*[5*f_ped_throughput]/10;
+cost..                                                                           f =e= Wv*[f_throughput + f_dist/100 + f_transit*5 + f_delay/50] + Wp*[5*f_ped_throughput]/40;
 cost_throughput..                                                                f_throughput =e= sum(vehicle_indi(i,j), sum(k, (1-g(i,j,k))));
 cost_distance..                                                                  f_dist =e= -sum(vehicle_indi(i,j), sum(k, (s(i,j,k) - s_init(i,j))*gamma(k))) / sum(i, sum(j, vehicle_indi(i,j)));
 cost_transition..                                                                f_transit =e= sum(l, sum(k, p_c(l,k)));
@@ -133,7 +133,7 @@ We need to add yellow time and all-red time during the transition.
 First equ: if phase l has become activated in time step k (went from 0 to 1), the  transition in k-1 should be equal to 1
 Second equ: Two steps in a row should not be tranition
 Third equ: the phase should be yellow (sum(l,p(l,k))=0) when transition has happened
-Fourth equ: the signal should not change for the next Gp steps because of pedestrian phase extension (not used for now so we set the threshold to 1)
+Fourth equ: the signal should not change for the next Gp steps because of pedestrian phase extension
 what about?..
 signal_rule_4(m)$(q(m,'1')=1)..                                                  sum(k$(ord(k)<Gp), q(m,k)) =e= Gp;
 $offtext

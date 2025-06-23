@@ -104,6 +104,9 @@ class MpcAgent:
                             self.exclusive_phase_ind=index
                         self.ped_phase_map[index] = green_crossings
                         self.veh_phase_map[index] = green_lanes
+        # TODO: make this a dictionary of different intersections
+        self.paras["ped_phase_map"] = self.ped_phase_map
+        self.paras["veh_phase_map"] = self.veh_phase_map
 
 
     def reset_solutions(self):
@@ -387,9 +390,14 @@ class MpcAgent:
                     self.extension_steps = 1
                 else:
                     prv_step = self.next_global_step_to_re_solve_the_netwok
-                    self.next_global_step_to_re_solve_the_netwok += int(
-                        (self.yellow_time+self.all_red_time+self.paras["ped_FDW"]) / self.delta_T_faster
-                    )
+                    if len(self.ped_phase_map[current_phase])>0:
+                        self.next_global_step_to_re_solve_the_netwok += int(
+                            (self.yellow_time+self.all_red_time+self.paras["ped_FDW"]) / self.delta_T_faster
+                        )
+                    else:
+                        self.next_global_step_to_re_solve_the_netwok += int(
+                            (self.yellow_time+self.all_red_time) / self.delta_T_faster
+                        )
                     self.is_extended = False
                     self.extension_steps = 1
         else:
@@ -454,9 +462,12 @@ class MpcAgent:
                     # print("ultimate Gp: ", Gp)
                 print("extension steps: ", self.extension_steps)
                 prv_step = self.next_global_step_to_re_solve_the_netwok
-                self.next_global_step_to_re_solve_the_netwok += int(
-                    max(self.delta_T, Gp) / self.delta_T_faster
-                )
+                if len(self.ped_phase_map[following_phases[0]]) > 0 and current_phase != following_phases[0]:
+                    self.next_global_step_to_re_solve_the_netwok += int(
+                    (max(self.delta_T, Gp)+self.paras["ped_LPI"]) / self.delta_T_faster)
+                else:
+                    self.next_global_step_to_re_solve_the_netwok += int(
+                    (max(self.delta_T, Gp)) / self.delta_T_faster)
         self.phase_list_multi.append(following_phases[0])
         self.duration_list_multi.append((self.next_global_step_to_re_solve_the_netwok-prv_step)*0.5)
         # if ((self.next_global_step_to_re_solve_the_netwok-prv_step)*0.5)>30:

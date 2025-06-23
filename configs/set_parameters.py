@@ -19,7 +19,7 @@ def set_common_paras(paras):
     # Discount ratio used to stabilize the MPC problem.
     paras["discount_ratio"] = 0.95
     # weighting factor for each mode (for the slower scale problem optimization)(must add up to 1)
-    paras["weight(Vehicles/Pedestrians)"] = (0.2, 0.8)
+    paras["weight(Vehicles/Pedestrians)"] = (0.5, 0.5)
 
     ## IDM model parameters, see Equation (11) in the second paper.
     # Maximum acceleration that the vehicles can reach, in m/s^{2}.
@@ -36,6 +36,8 @@ def set_common_paras(paras):
     paras["penetration"] = 1
     # Concurrent or Exclusive Pedestrian phasing
     paras["ped_phasing"] = "Concurrent" #"Concurrent" or "Exclusive"
+    paras["ped_subsetting"] = "LPI"  ## Concurrent subsettings: permitted_right, protected_right, LPI, delayed_turn
+
     # Random seed used to generate the volume.
     paras["random_seed"] = 1
     # simulation duration.
@@ -44,12 +46,19 @@ def set_common_paras(paras):
     paras["simulation_steps"] = paras["simulation_duration"] // paras["delta_T"]
     # Signal yellow time added between conflicting phases.
     if paras["ped_phasing"] == "Concurrent":
-        paras["yellow_time"] = 3
-        paras["all_red_time"] = 2
+        # General Concurrnt settings
+        paras["yellow_time"] = 3 #s
+        paras["all_red_time"] = 2 #s
+        paras["ped_FDW"] = 5 #s
+
+        #Sub-settings:
+        if paras["ped_subsetting"] == "permitted_right":
+            paras["ped_LPI"] = 0
+        if paras["ped_subsetting"] == "LPI":
+            paras["ped_LPI"] = 5 #s
     else:
         paras["yellow_time"] = 3
         paras["all_red_time"] = 0
-    paras["ped_FDW"]= 5
     # Speed limit of all roads, in m/s.
     paras["speed_limit"] = 13
     # Vehicle length.
@@ -68,8 +77,8 @@ def set_common_paras(paras):
     # Ratio of Electric Vehicles (between 0 and 1)
     paras["ratio_ev"] = 0
     # Poisson gamma for pedestrian demand
-    paras["poisson_gamma_pedestrian"] = 0.01 # high:0.07 medium=0.04 low=0.01
-    paras["ped_demand_symmetry"] = "Symmetric" # Asymmetric or Symmetric pedestrian demand
+    paras["poisson_gamma_pedestrian"] = 0.07 # high:0.07 medium=0.04 low=0.01
+    paras["ped_demand_symmetry"] = "Asymmetric" # Asymmetric or Symmetric pedestrian demand
 
     ## pedestrian parameters:
     paras['ped_speed']=1 # m/s average speed assumed for pedestrians

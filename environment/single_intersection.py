@@ -42,8 +42,8 @@ class SingleIntersection:
         self.greenTimeSofar = {}
         self.next_time_to_change_to_actuated = {}
         self.stopped_peds = set()
-        ## TODO: generalize self.cross_map needed for Actuation part
-        self.cross_map = {':1_c0': 'N', ':1_c2': 'E', ':1_c4': 'S', ':1_c5': 'W', ':1_c3': 'NWSE', ':1_c1': 'NESW'}
+        # ## TODO: generalize self.cross_map needed for Actuation part
+        # self.cross_map = {':1_c0': 'N', ':1_c2': 'E', ':1_c4': 'S', ':1_c5': 'W', ':1_c3': 'NWSE', ':1_c1': 'NESW'}
         self.map_diag = {}
         for inter_id in self.network_graph:
             self.map_diag.setdefault(inter_id, {})
@@ -64,6 +64,8 @@ class SingleIntersection:
         self.yellow_duration=0
         self.noWALK=0
         self.clearance = False
+        self.LPI = 0
+        self.LPI_on = False
         self.phase_avg = None
         self.phase_ntimes = None
         self.right_turn_conflicts = {}
@@ -72,6 +74,7 @@ class SingleIntersection:
     def start_sumo(self, show_gui, control_type, network_type, volume_type):
         penetration = self.paras["penetration"]
         pedestrian_phasing = self.paras["ped_phasing"]
+        pedestrian_subsetting = self.paras["ped_subsetting"]
 
         ## GUI setting.
         if show_gui:
@@ -86,9 +89,13 @@ class SingleIntersection:
         model_dir = os.path.dirname(os.path.realpath(__file__)) + "/network_model"
         if not os.path.exists(model_dir):
             raise TypeError("Network model is not built yet.")
-        if control_type != "multi_scale":
+        if control_type == "fixed_time":
             model_file_name = (
                 model_dir + "/" + network_type + "_" + control_type + ".sumocfg"
+            )
+        elif control_type == "actuated":
+            model_file_name = (
+                model_dir + "/" + network_type + "_" + control_type + "_(" + pedestrian_subsetting + ")" + ".sumocfg"
             )
         else:
             model_file_name = (
@@ -448,17 +455,34 @@ class SingleIntersection:
         self, should_update_signal, next_signal_phase, speed_commands
     ):
         for inter_id in self.network_graph:
-            cur_phase = int(traci.trafficlight.getPhase(inter_id))
-
+            print(traci.simulation.getTime())
             # Signal phase control
+            ## TODO: every added variable such as noWALK and LPI should be a dictionary for each intersection in a networkwide setting
+            if self.paras["ped_subsetting"] == "LPI" and self.LPI == self.paras["ped_LPI"] +self.paras["delta_T_faster"]:
+                traci.trafficlight.setPhase(inter_id, next_signal_phase)
+                self.LPI_on = False
+                self.LPI = 0
+
+            cur_phase = int(traci.trafficlight.getPhase(inter_id))
             if should_update_signal:
                 if next_signal_phase == -1:
-                    self.noWALK += self.paras["delta_T_faster"]
-                    traci.trafficlight.setPhase(inter_id, cur_phase + 2*self.network_graph[inter_id]["num_phases"])
-                    self.clearance = True
+                    if len(self.paras["ped_phase_map"][cur_phase])>0:
+                        self.noWALK += self.paras["delta_T_faster"]
+                        traci.trafficlight.setPhase(inter_id, cur_phase + 2*self.network_graph[inter_id]["num_phases"])
+                        self.clearance = True
+                    else:
+                        traci.trafficlight.setPhase(inter_id, cur_phase + self.network_graph[inter_id]["num_phases"])
+                        self.yellow_duration += self.paras["delta_T_faster"]
+                        self.clearance = False
                 else:
-                    traci.trafficlight.setPhase(inter_id, next_signal_phase)
-                    self.yellow_duration = 0
+                    if self.paras["ped_subsetting"] == "LPI" and len(self.paras["ped_phase_map"][next_signal_phase])>0 and cur_phase != next_signal_phase:
+                        traci.trafficlight.setPhase(inter_id, next_signal_phase + 3*self.network_graph[inter_id]["num_phases"])
+                        self.LPI = self.paras["delta_T_faster"]
+                        self.LPI_on = True
+                        self.yellow_duration = 0
+                    else:
+                        traci.trafficlight.setPhase(inter_id, next_signal_phase)
+                        self.yellow_duration = 0
             elif next_signal_phase == -1:
                 if self.clearance:
                     self.noWALK += self.paras["delta_T_faster"]
@@ -466,9 +490,11 @@ class SingleIntersection:
                     self.yellow_duration += self.paras["delta_T_faster"]
                     self.noWALK=0
 
-            if self.yellow_duration == self.paras["yellow_time"]:
-                traci.trafficlight.setPhase(inter_id, self.paras["all_red_index"])
 
+            if self.LPI_on:
+                self.LPI += self.paras["delta_T_faster"]
+            if self.yellow_duration == self.paras["yellow_time"] + self.paras["delta_T_faster"]:
+                traci.trafficlight.setPhase(inter_id, self.paras["all_red_index"])
             if self.noWALK == self.paras["ped_FDW"] + self.paras["delta_T_faster"]:
                 traci.trafficlight.setPhase(inter_id, cur_phase - self.network_graph[inter_id]["num_phases"])
                 self.clearance = False
@@ -529,9 +555,9 @@ class SingleIntersection:
             raise
 
         if control_type == "multi_scale":
-            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["weight(Vehicles/Pedestrians)"]}_{a}.txt"
+            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["ped_subsetting"]}_{self.paras["weight(Vehicles/Pedestrians)"]}_{a}.txt"
         else:
-            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{a}.txt"
+            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_subsetting"]}_{a}.txt"
         with open(file_name, 'w') as file:
             file.write(f"average fuel consumption (external model) for CAVs {control_type} (in mg): {self.fuel_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ice"]),1)}\n")
             file.write(f"average fuel consumption (external model) for HDVs {control_type} (in mg): {self.fuel_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ice"]),1)}\n")
