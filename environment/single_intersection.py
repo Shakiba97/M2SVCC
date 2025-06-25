@@ -623,13 +623,6 @@ class SingleIntersection:
                     if set([foe,ego]) not in conflict_cnt_VehVeh:
                         conflict_cnt_VehVeh.append(set([foe,ego]))
                     break
-                # elif position != "NA" and measure.tag == "PET":
-                #     # x, y = map(float, position.split(','))
-                #     # edgeID, lanePosition, laneIndex = traci.simulation.convertRoad(x, y, isGeo=False)
-                #     # out_edge_ids= [x[:-2] for x in self.paras["network_graph"][inter_id]["outgoing_veh"].keys()]
-                #     # if edgeID not in out_edge_ids:
-                #     conflict_cnt_VehVeh += 1
-                #     break
         traci.close()
         return len(conflict_cnt_VehVeh)
 
