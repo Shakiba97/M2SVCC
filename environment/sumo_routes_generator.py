@@ -16,9 +16,7 @@ class SumoRoutesGenerator:
                 others: Ids of all non we and ew vehicles.
                 all: Ids of all vehicles.
         """
-        N = (
-            self.paras["simulation_steps"] * self.paras["delta_T"]
-        )  # number of time steps
+        N = (self.paras["simulation_steps"] * self.paras["delta_T"])  # number of time steps
 
         penetration = self.paras["penetration"]
         depart_rate = self.paras["depart_rate"]
@@ -51,8 +49,11 @@ class SumoRoutesGenerator:
         with open(file_name, "w") as routes:
             print(
                 f"""<routes>
-            <vType id="cars" accel="3" decel="5" sigma="1" length="5" minGap="2" maxSpeed="13" \
-            guiShape="passenger"/>
+            <vType id="cars" accel="3" decel="5" sigma="1" length="5" minGap="2" maxSpeed="13" guiShape="passenger">
+                    <param key="has.ssm.device" value="true"/>
+                    <param key="device.ssm.measures" value="TTC DRAC PET BR SGAP TGAP PPET MDRAC"/>
+                    <param key="device.ssm.thresholds" value="1 3.0 2.0 0.0 0.2 0.5 2.0 3.4"/>
+            </vType>
 
             <route id="WE" edges="2_1 1_4" />
             <route id="WN" edges="2_1 1_5" />

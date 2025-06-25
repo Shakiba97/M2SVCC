@@ -35,9 +35,11 @@ class MpcAgent:
         #self.ws = GamsWorkspace(self.models_dir, system_directory=gams_dir, debug=1)
         self.ws = GamsWorkspace(self.models_dir, debug=1)
         if paras["ped_phasing"] == "Concurrent":
-            self.gams_file_slower = (self.models_dir + "/" + intersection_type + "_slower_Pedestrians.gms")
+            self.gams_file_slower = (self.models_dir + "/" + intersection_type + "_slower_" + paras[
+                "ped_phasing"] + "_" + f"({paras["ped_subsetting"]})" + ".gms")
         elif paras["ped_phasing"] == "Exclusive":
-            self.gams_file_slower = (self.models_dir + "/" + intersection_type + "_slower_Pedestrians (Exclusive).gms")
+            self.gams_file_slower = (self.models_dir + "/" + intersection_type + "_slower_" + paras[
+                "ped_phasing"] + ".gms")
         self.gams_file_faster = (
             self.models_dir + "/" + intersection_type + "_faster.gms"
         )

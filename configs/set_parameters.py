@@ -36,7 +36,7 @@ def set_common_paras(paras):
     paras["penetration"] = 1
     # Concurrent or Exclusive Pedestrian phasing
     paras["ped_phasing"] = "Concurrent" #"Concurrent" or "Exclusive"
-    paras["ped_subsetting"] = "LPI"  ## Concurrent subsettings: permitted_right, protected_right, LPI, delayed_turn
+    paras["ped_subsetting"] = "delayed_turn"  ## Concurrent subsettings: permitted_right, protected_right, LPI, delayed_turn
 
     # Random seed used to generate the volume.
     paras["random_seed"] = 1
@@ -54,8 +54,12 @@ def set_common_paras(paras):
         #Sub-settings:
         if paras["ped_subsetting"] == "permitted_right":
             paras["ped_LPI"] = 0
-        if paras["ped_subsetting"] == "LPI":
-            paras["ped_LPI"] = 5 #s
+        elif paras["ped_subsetting"] == "LPI":
+            paras["ped_LPI"] = 3 #s
+        elif paras["ped_subsetting"] == "protected_right":
+            paras["ped_LPI"] = 0
+        elif paras["ped_subsetting"] == "delayed_turn":
+            paras["ped_LPI"] = 3
     else:
         paras["yellow_time"] = 3
         paras["all_red_time"] = 0
@@ -77,8 +81,8 @@ def set_common_paras(paras):
     # Ratio of Electric Vehicles (between 0 and 1)
     paras["ratio_ev"] = 0
     # Poisson gamma for pedestrian demand
-    paras["poisson_gamma_pedestrian"] = 0.07 # high:0.07 medium=0.04 low=0.01
-    paras["ped_demand_symmetry"] = "Asymmetric" # Asymmetric or Symmetric pedestrian demand
+    paras["poisson_gamma_pedestrian"] = 0.04 # high:0.07 medium=0.04 low=0.01
+    paras["ped_demand_symmetry"] = "Symmetric" # Asymmetric or Symmetric pedestrian demand
 
     ## pedestrian parameters:
     paras['ped_speed']=1 # m/s average speed assumed for pedestrians

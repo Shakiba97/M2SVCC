@@ -99,7 +99,7 @@ class SingleIntersection:
             )
         else:
             model_file_name = (
-                model_dir + "/" + network_type + "_" + control_type + "_" + pedestrian_phasing + ".sumocfg"
+                model_dir + "/" + network_type + "_" + control_type + "_" + pedestrian_phasing  + "_(" + pedestrian_subsetting + ")" + ".sumocfg"
             )
 
 
@@ -132,6 +132,14 @@ class SingleIntersection:
             + str(int(penetration * 100))
             + ".xml"
         )
+        SSM_file = (
+            data_dir_next
+            + "/SSMinfo_"
+            + control_type
+            + "_pene_"
+            + str(int(penetration * 100))
+            + ".xml"
+        )
 
         ## Start SUMO.
         traci.start(
@@ -144,6 +152,7 @@ class SingleIntersection:
                 queue_file,
                 "--tripinfo-output",
                 trip_file,
+                '--device.ssm.file=' + SSM_file,
                 "--step-length",
                 "0.5",
             ]
@@ -458,7 +467,7 @@ class SingleIntersection:
             print(traci.simulation.getTime())
             # Signal phase control
             ## TODO: every added variable such as noWALK and LPI should be a dictionary for each intersection in a networkwide setting
-            if self.paras["ped_subsetting"] == "LPI" and self.LPI == self.paras["ped_LPI"] +self.paras["delta_T_faster"]:
+            if self.paras["ped_LPI"]>0 and self.LPI == self.paras["ped_LPI"] +self.paras["delta_T_faster"]:
                 traci.trafficlight.setPhase(inter_id, next_signal_phase)
                 self.LPI_on = False
                 self.LPI = 0
@@ -475,7 +484,7 @@ class SingleIntersection:
                         self.yellow_duration += self.paras["delta_T_faster"]
                         self.clearance = False
                 else:
-                    if self.paras["ped_subsetting"] == "LPI" and len(self.paras["ped_phase_map"][next_signal_phase])>0 and cur_phase != next_signal_phase:
+                    if self.paras["ped_LPI"]>0 and len(self.paras["ped_phase_map"][next_signal_phase])>0 and cur_phase != next_signal_phase:
                         traci.trafficlight.setPhase(inter_id, next_signal_phase + 3*self.network_graph[inter_id]["num_phases"])
                         self.LPI = self.paras["delta_T_faster"]
                         self.LPI_on = True
@@ -515,10 +524,13 @@ class SingleIntersection:
         data_dir_next = data_dir + "/" + network_type
         queue_file = (data_dir_next + "/queues_" + control_type + "_" + volume_type + "_pene_" + str(int(self.paras["penetration"] * 100)) + ".xml")
         tripinfo_file = (data_dir_next + "/tripinfo_" + control_type + "_" + volume_type + "_pene_" + str(int(self.paras["penetration"] * 100)) + ".xml")
+        SSMinfo_file = (data_dir_next + "/SSMinfo_" + control_type + "_pene_" + str(int(self.paras["penetration"] * 100)) + ".xml")
+
         self.get_average_delay_endtime(tripinfo_file)
         self.get_average_queue_length_endtime(queue_file)
         self.get_average_phase_duration(phase_list_multi, duration_list_multi, control_type)
         right_conflicts=self.right_turn_conflicts_measure()
+        conflict_cnt_VehVeh = self.get_number_of_conflicts(SSMinfo_file, "1")
         print(f"average fuel consumption (external model) for CAVs {control_type} (in mg): ",
               self.fuel_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ice"]),1))
         print(f"average fuel consumption (external model) for HDVs {control_type} (in mg): ",
@@ -538,6 +550,7 @@ class SingleIntersection:
         print(f"average pedestrian time loss for {control_type} (in s): ",
               self.lost_time_avg_ped)
         print(f"number of right-turn conflicts between vehicles and pedestrians: {right_conflicts}")
+        print(f"number of conflicts between vehicles and vehicles: {conflict_cnt_VehVeh}")
         print(f"number of CAVs passing through the specific intersection for {control_type}: ",
               len(self.paras["cav_ids"]))
         print(f"number of pedestrians passing through the specific intersection for {control_type}: ",
@@ -555,9 +568,9 @@ class SingleIntersection:
             raise
 
         if control_type == "multi_scale":
-            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["ped_subsetting"]}_{self.paras["weight(Vehicles/Pedestrians)"]}_{a}.txt"
+            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["ped_subsetting"]}_{self.paras["ped_demand_symmetry"]}_{self.paras["weight(Vehicles/Pedestrians)"]}_{a}.txt"
         else:
-            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_subsetting"]}_{a}.txt"
+            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["ped_subsetting"]}_{self.paras["ped_demand_symmetry"]}_{a}.txt"
         with open(file_name, 'w') as file:
             file.write(f"average fuel consumption (external model) for CAVs {control_type} (in mg): {self.fuel_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ice"]),1)}\n")
             file.write(f"average fuel consumption (external model) for HDVs {control_type} (in mg): {self.fuel_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ice"]),1)}\n")
@@ -570,6 +583,7 @@ class SingleIntersection:
             file.write(f"average queue length for {control_type} scenario (in m): {self.queue_avg}\n")
             file.write(f"average pedestrian time loss for {control_type} scenario (in s): {self.lost_time_avg_ped}\n")
             file.write(f"number of right-turn conflicts between vehicles and pedestrians: {right_conflicts}\n")
+            file.write(f"number of conflicts between vehicles and vehicles: {conflict_cnt_VehVeh}\n")
             file.write(f"number of CAVs passing through the specific intersection in {control_type} scenario: {len(self.paras['cav_ids'])}\n")
             file.write(f"number of pedestrians passing through the specific intersection in {control_type} scenario: {len(self.paras['ped_ids'])}\n")
             file.write(f"The time of simulation termination in {control_type} scenario: {step/2}\n")
@@ -581,6 +595,44 @@ class SingleIntersection:
         for key in self.right_turn_conflicts.keys():
             a+=len(self.right_turn_conflicts[key])
         return a
+
+    def get_number_of_conflicts(self, file, inter_id):
+        ## Start SUMO again for the needed traci function.
+        model_file = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + f"/environment/network_model/single_intersection_multi_scale_{self.paras["ped_phasing"]}_({self.paras["ped_subsetting"]}).sumocfg"
+        traci.start(["sumo", "-c",  model_file, "--start" ])
+
+        tree = ET.parse(file)
+        root = tree.getroot()
+        conflict_cnt_VehVeh=[]
+
+        cntt=0
+        for conflict in root.findall('.//conflict'):
+            cntt += 1
+            ego = conflict.attrib['ego']
+            foe = conflict.attrib['foe']
+            for measure in conflict:
+                position = measure.attrib.get("position")
+                value = measure.attrib.get("value")
+                if position != "NA" and measure.tag == "minTTC" and float(value)<=1: ##TTC calculates both lead-follow and merging,crossing
+                    # x, y = map(float, position.split(','))
+                    # edgeID, lanePosition, laneIndex = traci.simulation.convertRoad(x, y, isGeo=False)
+                    # out_edge_ids= [x[:-2] for x in self.paras["network_graph"][inter_id]["outgoing_veh"].keys()]
+                    # if edgeID not in out_edge_ids:
+                    # print(foe)
+                    # print(ego)
+                    if set([foe,ego]) not in conflict_cnt_VehVeh:
+                        conflict_cnt_VehVeh.append(set([foe,ego]))
+                    break
+                # elif position != "NA" and measure.tag == "PET":
+                #     # x, y = map(float, position.split(','))
+                #     # edgeID, lanePosition, laneIndex = traci.simulation.convertRoad(x, y, isGeo=False)
+                #     # out_edge_ids= [x[:-2] for x in self.paras["network_graph"][inter_id]["outgoing_veh"].keys()]
+                #     # if edgeID not in out_edge_ids:
+                #     conflict_cnt_VehVeh += 1
+                #     break
+        traci.close()
+        return len(conflict_cnt_VehVeh)
+
     def get_average_phase_duration(self, phase_list_multi, duration_list_multi, control_type):
         phase_dict = {}
         if control_type!="multi_scale":
