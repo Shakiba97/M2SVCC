@@ -135,7 +135,7 @@ class SumoRoutesGenerator:
             </flow>
             <flow id="SE-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[3]*1/6})" type="bike" route="SE" departLane="random">
             </flow>          
-            <flow id="WN-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[1]*1/12})" type="bike" route="WN" departLane="4">
+            <flow id="WN-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[1]*1})" type="bike" route="WN" departLane="1">
             </flow> 
             <flow id="NE-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[2]*1/12})" type="bike" route="NE" departLane="4">
             </flow>
