@@ -58,7 +58,7 @@ class SumoRoutesGenerator:
                     <param key="device.ssm.measures" value="TTC DRAC PET BR SGAP TGAP PPET MDRAC"/>
                     <param key="device.ssm.thresholds" value="1.5 3.0 2.0 0.0 0.2 0.5 2.0 3.4"/>
             </vType>
-            <vType id="bike" vClass="bicycle">
+            <vType id="bike" vClass="bicycle" latAlignment="nice" minGapLat="0.1">
                     <param key="has.ssm.device" value="true"/>
             </vType>
 
@@ -135,13 +135,13 @@ class SumoRoutesGenerator:
             </flow>
             <flow id="SE-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[3]*1/6})" type="bike" route="SE" departLane="random">
             </flow>          
-            <flow id="WN-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[1]*1})" type="bike" route="WN" departLane="1">
+            <flow id="WN-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[1]*1/6})" type="bike" route="WN" departLane="1">
             </flow> 
-            <flow id="NE-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[2]*1/12})" type="bike" route="NE" departLane="4">
+            <flow id="NE-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[2]*1/6})" type="bike" route="NE" departLane="4">
             </flow>
-            <flow id="ES-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[1]*1/12})" type="bike" route="ES" departLane="4">
+            <flow id="ES-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[1]*1/6})" type="bike" route="ES" departLane="4">
             </flow> 
-            <flow id="SW-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[3]*1/12})" type="bike" route="SW" departLane="4">
+            <flow id="SW-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[3]*1/6})" type="bike" route="SW" departLane="4">
             </flow>
             
             
@@ -178,14 +178,14 @@ class SumoRoutesGenerator:
                     if random.uniform(0, 1) < penetration:
                         cav_WEid.add("WE_%i" % vehNr_WE)
                         print(
-                            '    <vehicle id="WE_%i" type="cars" route="WE" depart="%i" departLane="3" color="0,1,0"/>'
+                            '    <vehicle id="WE_%i" type="cars" route="WE" depart="%i" departLane="4" color="0,1,0"/>'
                             % (vehNr_WE, i),
                             file=routes,
                         )
                     else:
                         hdv_WEid.add("WE_%i" % vehNr_WE)
                         print(
-                            '    <vehicle id="WE_%i" type="cars" route="WE" depart="%i" departLane="3"/>'
+                            '    <vehicle id="WE_%i" type="cars" route="WE" depart="%i" departLane="4"/>'
                             % (vehNr_WE, i),
                             file=routes,
                         )
@@ -194,14 +194,14 @@ class SumoRoutesGenerator:
                     if random.uniform(0, 1) < penetration:
                         cav_EWid.add("EW_%i" % vehNr_EW)
                         print(
-                            '    <vehicle id="EW_%i" type="cars" route="EW" depart="%i" departLane="3" color="0,1,0"/>'
+                            '    <vehicle id="EW_%i" type="cars" route="EW" depart="%i" departLane="4" color="0,1,0"/>'
                             % (vehNr_EW, i),
                             file=routes,
                         )
                     else:
                         hdv_EWid.add("EW_%i" % vehNr_EW)
                         print(
-                            '    <vehicle id="EW_%i" type="cars" route="EW" depart="%i" departLane="3" />'
+                            '    <vehicle id="EW_%i" type="cars" route="EW" depart="%i" departLane="4" />'
                             % (vehNr_EW, i),
                             file=routes,
                         )
@@ -211,14 +211,14 @@ class SumoRoutesGenerator:
                     if random.uniform(0, 1) < penetration:
                         cav_others.add("WN_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="WN_%i" type="cars" route="WN" depart="%i" departLane="4" color="0,1,0"/>'
+                            '    <vehicle id="WN_%i" type="cars" route="WN" depart="%i" departLane="5" color="0,1,0"/>'
                             % (vehNr_others, i),
                             file=routes,
                         )
                     else:
                         hdv_others.add("WN_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="WN_%i" type="cars" route="WN" depart="%i" departLane="4" />'
+                            '    <vehicle id="WN_%i" type="cars" route="WN" depart="%i" departLane="5" />'
                             % (vehNr_others, i),
                             file=routes,
                         )
@@ -227,14 +227,14 @@ class SumoRoutesGenerator:
                     if random.uniform(0, 1) < penetration:
                         cav_others.add("WS_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="WS_%i" type="cars" route="WS" depart="%i" departLane="2" color="0,1,0"/>'
+                            '    <vehicle id="WS_%i" type="cars" route="WS" depart="%i" departLane="3" color="0,1,0"/>'
                             % (vehNr_others, i),
                             file=routes,
                         )
                     else:
                         hdv_others.add("WS_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="WS_%i" type="cars" route="WS" depart="%i" departLane="2" />'
+                            '    <vehicle id="WS_%i" type="cars" route="WS" depart="%i" departLane="3" />'
                             % (vehNr_others, i),
                             file=routes,
                         )
@@ -243,14 +243,14 @@ class SumoRoutesGenerator:
                     if random.uniform(0, 1) < penetration:
                         cav_others.add("ES_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="ES_%i" type="cars" route="ES" depart="%i" departLane="4" color="0,1,0"/>'
+                            '    <vehicle id="ES_%i" type="cars" route="ES" depart="%i" departLane="5" color="0,1,0"/>'
                             % (vehNr_others, i),
                             file=routes,
                         )
                     else:
                         hdv_others.add("ES_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="ES_%i" type="cars" route="ES" depart="%i" departLane="4" />'
+                            '    <vehicle id="ES_%i" type="cars" route="ES" depart="%i" departLane="5" />'
                             % (vehNr_others, i),
                             file=routes,
                         )
@@ -259,14 +259,14 @@ class SumoRoutesGenerator:
                     if random.uniform(0, 1) < penetration:
                         cav_others.add("EN_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="EN_%i" type="cars" route="EN" depart="%i" departLane="2" color="0,1,0"/>'
+                            '    <vehicle id="EN_%i" type="cars" route="EN" depart="%i" departLane="3" color="0,1,0"/>'
                             % (vehNr_others, i),
                             file=routes,
                         )
                     else:
                         hdv_others.add("EN_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="EN_%i" type="cars" route="EN" depart="%i" departLane="2" />'
+                            '    <vehicle id="EN_%i" type="cars" route="EN" depart="%i" departLane="3" />'
                             % (vehNr_others, i),
                             file=routes,
                         )
@@ -275,14 +275,14 @@ class SumoRoutesGenerator:
                     if random.uniform(0, 1) < penetration:
                         cav_others.add("NS_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="NS_%i" type="cars" route="NS" depart="%i" departLane="3" color="0,1,0"/>'
+                            '    <vehicle id="NS_%i" type="cars" route="NS" depart="%i" departLane="4" color="0,1,0"/>'
                             % (vehNr_others, i),
                             file=routes,
                         )
                     else:
                         hdv_others.add("NS_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="NS_%i" type="cars" route="NS" depart="%i" departLane="3" />'
+                            '    <vehicle id="NS_%i" type="cars" route="NS" depart="%i" departLane="4" />'
                             % (vehNr_others, i),
                             file=routes,
                         )
@@ -291,14 +291,14 @@ class SumoRoutesGenerator:
                     if random.uniform(0, 1) < penetration:
                         cav_others.add("NE_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="NE_%i" type="cars" route="NE" depart="%i" departLane="4" color="0,1,0"/>'
+                            '    <vehicle id="NE_%i" type="cars" route="NE" depart="%i" departLane="5" color="0,1,0"/>'
                             % (vehNr_others, i),
                             file=routes,
                         )
                     else:
                         hdv_others.add("NE_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="NE_%i" type="cars" route="NE" depart="%i" departLane="4" />'
+                            '    <vehicle id="NE_%i" type="cars" route="NE" depart="%i" departLane="5" />'
                             % (vehNr_others, i),
                             file=routes,
                         )
@@ -307,14 +307,14 @@ class SumoRoutesGenerator:
                     if random.uniform(0, 1) < penetration:
                         cav_others.add("NW_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="NW_%i" type="cars" route="NW" depart="%i" departLane="2" color="0,1,0"/>'
+                            '    <vehicle id="NW_%i" type="cars" route="NW" depart="%i" departLane="3" color="0,1,0"/>'
                             % (vehNr_others, i),
                             file=routes,
                         )
                     else:
                         hdv_others.add("NW_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="NW_%i" type="cars" route="NW" depart="%i" departLane="2" />'
+                            '    <vehicle id="NW_%i" type="cars" route="NW" depart="%i" departLane="3" />'
                             % (vehNr_others, i),
                             file=routes,
                         )
@@ -323,14 +323,14 @@ class SumoRoutesGenerator:
                     if random.uniform(0, 1) < penetration:
                         cav_others.add("SN_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="SN_%i" type="cars" route="SN" depart="%i" departLane="3" color="0,1,0"/>'
+                            '    <vehicle id="SN_%i" type="cars" route="SN" depart="%i" departLane="4" color="0,1,0"/>'
                             % (vehNr_others, i),
                             file=routes,
                         )
                     else:
                         hdv_others.add("SN_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="SN_%i" type="cars" route="SN" depart="%i" departLane="3" />'
+                            '    <vehicle id="SN_%i" type="cars" route="SN" depart="%i" departLane="4" />'
                             % (vehNr_others, i),
                             file=routes,
                         )
@@ -339,14 +339,14 @@ class SumoRoutesGenerator:
                     if random.uniform(0, 1) < penetration:
                         cav_others.add("SW_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="SW_%i" type="cars" route="SW" depart="%i" departLane="4" color="0,1,0"/>'
+                            '    <vehicle id="SW_%i" type="cars" route="SW" depart="%i" departLane="5" color="0,1,0"/>'
                             % (vehNr_others, i),
                             file=routes,
                         )
                     else:
                         hdv_others.add("SW_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="SW_%i" type="cars" route="SW" depart="%i" departLane="4" />'
+                            '    <vehicle id="SW_%i" type="cars" route="SW" depart="%i" departLane="5" />'
                             % (vehNr_others, i),
                             file=routes,
                         )
@@ -355,14 +355,14 @@ class SumoRoutesGenerator:
                     if random.uniform(0, 1) < penetration:
                         cav_others.add("SE_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="SE_%i" type="cars" route="SE" depart="%i" departLane="2" color="0,1,0"/>'
+                            '    <vehicle id="SE_%i" type="cars" route="SE" depart="%i" departLane="3" color="0,1,0"/>'
                             % (vehNr_others, i),
                             file=routes,
                         )
                     else:
                         hdv_others.add("SE_%i" % vehNr_others)
                         print(
-                            '    <vehicle id="SE_%i" type="cars" route="SE" depart="%i" departLane="2" />'
+                            '    <vehicle id="SE_%i" type="cars" route="SE" depart="%i" departLane="3" />'
                             % (vehNr_others, i),
                             file=routes,
                         )
