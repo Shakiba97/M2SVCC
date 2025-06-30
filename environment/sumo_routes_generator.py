@@ -143,8 +143,6 @@ class SumoRoutesGenerator:
             </flow> 
             <flow id="SW-bike"  begin="0" end= "{simulation_dur}" period="exp({poisson_gamma_bike*division[3]*1/6})" type="bike" route="SW" departLane="4">
             </flow>
-            
-            
    
             """,
                 file=routes,
