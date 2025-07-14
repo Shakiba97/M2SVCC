@@ -43,8 +43,8 @@ class SingleIntersection:
         self.greenTimeSofar = {}
         self.next_time_to_change_to_actuated = {}
         self.stopped_peds = set()
-        ## TODO: generalize self.cross_map needed for Actuation part
-        self.cross_map = {':1_c0': 'N', ':1_c2': 'E', ':1_c4': 'S', ':1_c5': 'W', ':1_c3': 'NWSE', ':1_c1': 'NESW'}
+        # ## TODO: generalize self.cross_map needed for Actuation part
+        # self.cross_map = {':1_c0': 'N', ':1_c2': 'E', ':1_c4': 'S', ':1_c5': 'W', ':1_c3': 'NWSE', ':1_c1': 'NESW'}
         self.map_diag = {}
         for inter_id in self.network_graph:
             self.map_diag.setdefault(inter_id, {})
@@ -63,6 +63,10 @@ class SingleIntersection:
         self.cur_phase = {}
         self.previous_phase = {}
         self.yellow_duration=0
+        self.noWALK=0
+        self.clearance = False
+        self.LPI = 0
+        self.LPI_on = False
         self.phase_avg = None
         self.phase_ntimes = None
         self.right_turn_conflicts = {}
@@ -73,6 +77,7 @@ class SingleIntersection:
     def start_sumo(self, show_gui, control_type, network_type, volume_type):
         penetration = self.paras["penetration"]
         pedestrian_phasing = self.paras["ped_phasing"]
+        pedestrian_subsetting = self.paras["ped_subsetting"]
 
         ## GUI setting.
         if show_gui:
@@ -87,14 +92,24 @@ class SingleIntersection:
         model_dir = os.path.dirname(os.path.realpath(__file__)) + "/network_model"
         if not os.path.exists(model_dir):
             raise TypeError("Network model is not built yet.")
-        if control_type != "multi_scale":
+        if control_type == "fixed_time":
             model_file_name = (
                 model_dir + "/" + network_type + "_" + control_type + ".sumocfg"
             )
-        else:
+        elif control_type == "actuated":
             model_file_name = (
-                model_dir + "/" + network_type + "_" + control_type + "_" + pedestrian_phasing + ".sumocfg"
+                    model_dir + "/" + network_type + "_" + control_type + "_" + pedestrian_phasing + "_(" + pedestrian_subsetting + ")" + ".sumocfg"
             )
+        else:
+            if pedestrian_phasing=="Exclusive":
+                model_file_name = (
+                    model_dir + "/" + network_type + "_" + control_type + "_" + pedestrian_phasing + ".sumocfg"
+                )
+            elif pedestrian_phasing=="Concurrent":
+                model_file_name = (
+                    model_dir + "/" + network_type + "_" + control_type + "_" + pedestrian_phasing  + "_(" + pedestrian_subsetting + ")" + ".sumocfg"
+                )
+
 
 
         ## Create folder to store simulation data.
@@ -110,6 +125,8 @@ class SingleIntersection:
             data_dir_next
             + "/queues_"
             + control_type
+            + "_"
+            + volume_type
             + "_pene_"
             + str(int(penetration * 100))
             + ".xml"
@@ -118,6 +135,8 @@ class SingleIntersection:
             data_dir_next
             + "/tripinfo_"
             + control_type
+            + "_"
+            + volume_type
             + "_pene_"
             + str(int(penetration * 100))
             + ".xml"
@@ -193,10 +212,6 @@ class SingleIntersection:
             num_predict_steps = self.paras["num_predict_steps"]
             bike_map={}
             i=1
-            for lane in (self.paras["network_graph"][inter_id]["incoming_bike"]):
-                bike_map[lane]=i
-                i+=1
-            i=1
             for crossing in self.paras["network_graph"][inter_id]["crossing"]:
                 crossing_number_map[crossing]= i
                 i +=1
@@ -205,10 +220,10 @@ class SingleIntersection:
                 for i in range(1, num_predict_steps +2):
                     cross_demand_all_steps.setdefault(crossing_number_map[cc], {})
                     cross_demand_all_steps[crossing_number_map[cc]][i]=set()
-            for bikelane in self.paras["network_graph"][inter_id]["incoming_bike"]:
+            for index, bikelane in enumerate(self.paras["network_graph"][inter_id]["incoming_bike"]):
                 for i in range(1, num_predict_steps + 2):
-                    bike_demand.setdefault(bike_map[bikelane], {})
-                    bike_demand[bike_map[bikelane]][i]=set()
+                    bike_demand.setdefault(index+1, {})
+                    bike_demand[index+1][i]=set()
             communication_range = self.paras["communication_range"]
             ## Get static information.
             for lane in traffic_graph[inter_id]["incoming_veh"]:
@@ -263,7 +278,7 @@ class SingleIntersection:
             all_peds=traci.person.getIDList()
             for car in all_cars:
                 for dir in right_turning_vehs:
-                    if dir in car and traci.vehicle.getLaneID(car).startswith(":"):
+                    if dir in car and traci.vehicle.getLaneID(car).startswith(":") and "bike" not in car:
                         for ped in all_peds:
                             if traci.lane.getEdgeID(traci.person.getLaneID(ped)) in self.paras["network_graph"][inter_id]["crossing"]:
                                 position_car=traci.vehicle.getPosition(car)
@@ -335,9 +350,9 @@ class SingleIntersection:
                     for step in range(num_predict_steps + 1):
                         if speed == 0:
                             if pos > 10:
-                                bike_demand[bike_map[bike_lane_id[i]]][1].add(bikes_lane[j])
+                                bike_demand[i+1][1].add(bikes_lane[j])
                         elif (186.4 - pos)/speed <= (step + 1) * delta_T and (186.4 - pos)/speed >= (step) * delta_T:
-                            bike_demand[bike_map[bike_lane_id[i]]][step + 1].add(bikes_lane[j])
+                            bike_demand[i+1][step + 1].add(bikes_lane[j])
             # print("bike demand: ", bike_demand)
 
             ## Get dynamic information. Use linear interpolation to estimate HDV's and Bike's state.
@@ -494,6 +509,7 @@ class SingleIntersection:
                         ## This is a HDV or Bike. We can't get the state. Just record the ids and update the number of HDVs and Bikes.
                         current_ids_hdv_bike.append(cars_lane[j])
                         if "bike" in cars_lane[j]:
+                            self.paras["bike_ids"].add(cars_lane[j])
                             rates.append(1)
                             lengths.append(1.6)
                         else:
@@ -746,10 +762,10 @@ class SingleIntersection:
                         minGap[ind_lane].append(self.paras["minGap"]["Car"])
 
             # print(veh_id)
-            print(pos_vehicles2)
-            print(pos_vehicles)
-            print(speed_vehicles2)
-            print(speed_vehicles)
+            # print(pos_vehicles2)
+            # print(pos_vehicles)
+            # print(speed_vehicles2)
+            # print(speed_vehicles)
             self.network_state[inter_id] = {
                 "num_vehicles_max": num_vehicles_max,
                 "pos_vehicles": pos_vehicles,
@@ -775,28 +791,51 @@ class SingleIntersection:
         self, should_update_signal, next_signal_phase, speed_commands
     ):
         for inter_id in self.network_graph:
-            cur_phase = int(traci.trafficlight.getPhase(inter_id))
-
+            print(traci.simulation.getTime())
             # Signal phase control
+            ## TODO: every added variable such as noWALK and LPI should be a dictionary for each intersection in a networkwide setting
+            if self.paras["ped_LPI"]>0 and self.LPI == self.paras["ped_LPI"] +self.paras["delta_T_faster"]:
+                traci.trafficlight.setPhase(inter_id, next_signal_phase)
+                self.LPI_on = False
+                self.LPI = 0
+
+            cur_phase = int(traci.trafficlight.getPhase(inter_id))
             if should_update_signal:
                 if next_signal_phase == -1:
-                    self.yellow_duration = self.paras["delta_T_faster"]
-                    # if self.paras["ped_phasing"] == "Exclusive" and cur_phase + self.network_graph[inter_id]["num_phases"] == self.paras["all_red_index"]:
-                    #     traci.trafficlight.setPhase(inter_id, cur_phase + self.network_graph[inter_id]["num_phases"]+1)
-                    # else:
-                    traci.trafficlight.setPhase(inter_id, cur_phase + self.network_graph[inter_id]["num_phases"])
+                    if len(self.paras["ped_phase_map"][cur_phase])>0 and self.paras["ped_phasing"] == "Concurrent":
+                        self.noWALK += self.paras["delta_T_faster"]
+                        traci.trafficlight.setPhase(inter_id, cur_phase + 2*self.network_graph[inter_id]["num_phases"])
+                        self.clearance = True
+                    else:
+                        traci.trafficlight.setPhase(inter_id, cur_phase + self.network_graph[inter_id]["num_phases"])
+                        self.yellow_duration += self.paras["delta_T_faster"]
+                        self.clearance = False
                 else:
-                    traci.trafficlight.setPhase(inter_id, next_signal_phase)
-                    self.yellow_duration = 0
+                    if self.paras["ped_LPI"]>0 and len(self.paras["ped_phase_map"][next_signal_phase])>0 and cur_phase != next_signal_phase:
+                        traci.trafficlight.setPhase(inter_id, next_signal_phase + 3*self.network_graph[inter_id]["num_phases"])
+                        self.LPI = self.paras["delta_T_faster"]
+                        self.LPI_on = True
+                        self.yellow_duration = 0
+                    else:
+                        traci.trafficlight.setPhase(inter_id, next_signal_phase)
+                        self.yellow_duration = 0
             elif next_signal_phase == -1:
-                self.yellow_duration += self.paras["delta_T_faster"]
+                if self.clearance:
+                    self.noWALK += self.paras["delta_T_faster"]
+                    print(self.noWALK)
+                else:
+                    self.yellow_duration += self.paras["delta_T_faster"]
+                    self.noWALK=0
 
-            # if self.paras["ped_phasing"] == "Exclusive" and cur_phase == self.paras["all_red_index"] + 1:
-            #     if self.yellow_duration == 10:
-            #         traci.trafficlight.setPhase(inter_id, self.paras["all_red_index"])
-            # elif self.yellow_duration == self.paras["yellow_time"]:
-            if self.yellow_duration == self.paras["yellow_time"]:
+
+            if self.LPI_on:
+                self.LPI += self.paras["delta_T_faster"]
+            if self.yellow_duration == self.paras["yellow_time"] + self.paras["delta_T_faster"]:
                 traci.trafficlight.setPhase(inter_id, self.paras["all_red_index"])
+            if self.noWALK == self.paras["ped_FDW"] + self.paras["delta_T_faster"]:
+                traci.trafficlight.setPhase(inter_id, cur_phase - self.network_graph[inter_id]["num_phases"])
+                self.clearance = False
+                self.yellow_duration += self.paras["delta_T_faster"]
 
             # Vehicles control
             network_vehs = traci.vehicle.getIDList()
@@ -811,8 +850,8 @@ class SingleIntersection:
     def performance_results(self, phase_list_multi, duration_list_multi, network_type, volume_type, control_type, step):
         data_dir = os.path.dirname(os.path.realpath(__file__)) + "/simulation_data"
         data_dir_next = data_dir + "/" + network_type
-        queue_file = (data_dir_next + "/queues_" + control_type + "_pene_" + str(int(self.paras["penetration"] * 100)) + ".xml")
-        tripinfo_file = (data_dir_next + "/tripinfo_" + control_type + "_pene_" + str(int(self.paras["penetration"] * 100)) + ".xml")
+        queue_file = (data_dir_next + "/queues_" + control_type + "_" + volume_type + "_pene_" + str(int(self.paras["penetration"] * 100)) + ".xml")
+        tripinfo_file = (data_dir_next + "/tripinfo_" + control_type + "_" + volume_type + "_pene_" + str(int(self.paras["penetration"] * 100)) + ".xml")
         SSMinfo_file = (data_dir_next + "/SSMinfo_" + control_type + "_pene_" + str(int(self.paras["penetration"] * 100)) + ".xml")
 
         self.get_average_delay_endtime(tripinfo_file)
@@ -863,9 +902,9 @@ class SingleIntersection:
             raise
 
         if control_type == "multi_scale":
-            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["weight(Vehicles/Pedestrians/Bikes)"]}_{a}.txt"
+            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["ped_subsetting"]}_{self.paras["ped_demand_symmetry"]}_{self.paras["weight(Vehicles/Pedestrians/Bikes)"]}_{a}.txt"
         else:
-            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{a}.txt"
+            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["ped_subsetting"]}_{self.paras["ped_demand_symmetry"]}_{a}.txt"
         with open(file_name, 'w') as file:
             file.write(f"average fuel consumption (external model) for CAVs {control_type} (in mg): {self.fuel_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ice"]),1)}\n")
             file.write(f"average fuel consumption (external model) for HDVs {control_type} (in mg): {self.fuel_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ice"]),1)}\n")
@@ -890,54 +929,48 @@ class SingleIntersection:
             file.write(f"average phase lengths:  {self.phase_avg}\n")
             file.write(f"number of times each phase happened: {self.phase_ntimes}\n")
 
-
     def get_number_of_conflicts(self, file, inter_id):
         ## Start SUMO again for the needed traci function.
-        model_file = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + f"/environment/network_model/single_intersection_multi_scale_Concurrent.sumocfg"
-        traci.start(["sumo", "-c",  model_file, "--start" ])
+        if self.paras["ped_phasing"] == "Exclusive":
+            model_file = os.path.dirname(os.path.dirname(os.path.realpath(
+                __file__))) + f"/environment/network_model/single_intersection_multi_scale_{self.paras["ped_phasing"]}.sumocfg"
+        else:
+            model_file = os.path.dirname(os.path.dirname(os.path.realpath(
+                __file__))) + f"/environment/network_model/single_intersection_multi_scale_{self.paras["ped_phasing"]}_({self.paras["ped_subsetting"]}).sumocfg"
+        # traci.start(["sumo", "-c", model_file, "--start"])
 
         tree = ET.parse(file)
         root = tree.getroot()
-        conflict_cnt_BikeVeh=0
-        conflict_cnt_BikeBike=0
-        conflict_cnt_VehVeh=0
-
-        cntt=0
+        conflict_cnt_BikeVeh= []
+        conflict_cnt_BikeBike= []
+        conflict_cnt_VehVeh= []
+        cntt = 0
         for conflict in root.findall('.//conflict'):
             cntt += 1
             ego = conflict.attrib['ego']
             foe = conflict.attrib['foe']
             for measure in conflict:
                 position = measure.attrib.get("position")
-                if position != "NA" and measure.tag == "minTTC":
-                    x, y = map(float, position.split(','))
-                    edgeID, lanePosition, laneIndex = traci.simulation.convertRoad(x, y, isGeo=False)
-                    out_edge_ids= [x[:-2] for x in self.paras["network_graph"][inter_id]["outgoing_veh"].keys()]
-                    if edgeID not in out_edge_ids:
-                        if "bike" in foe and "bike" in ego:
-                            conflict_cnt_BikeBike += 1
-                        elif "bike" in foe or "bike" in ego:
-                            conflict_cnt_BikeVeh += 1
-                        else:
-                            conflict_cnt_VehVeh += 1
-                        break
+                value = measure.attrib.get("value")
+                if position != "NA" and measure.tag == "minTTC" and float(value) <= 1.5:  ##TTC calculates both lead-follow and merging,crossing
 
-                elif position != "NA" and measure.tag == "PET":
-                    x, y = map(float, position.split(','))
-                    edgeID, lanePosition, laneIndex = traci.simulation.convertRoad(x, y, isGeo=False)
-                    out_edge_ids= [x[:-2] for x in self.paras["network_graph"][inter_id]["outgoing_veh"].keys()]
-                    if edgeID not in out_edge_ids:
-                        if "bike" in foe and "bike" in ego:
-                            conflict_cnt_BikeBike += 1
-                        elif "bike" in foe or "bike" in ego:
-                            conflict_cnt_BikeVeh += 1
-                        else:
-                            conflict_cnt_VehVeh += 1
-                        break
+                    # x, y = map(float, position.split(','))
+                    # edgeID, lanePosition, laneIndex = traci.simulation.convertRoad(x, y, isGeo=False)
+                    # out_edge_ids= [x[:-2] for x in self.paras["network_graph"][inter_id]["outgoing_veh"].keys()]
+                    # if edgeID not in out_edge_ids:
+                    # print(foe)
+                    # print(ego)
+                    if "bike" in foe and "bike" in ego and set([foe, ego]) not in conflict_cnt_BikeBike:
+                        conflict_cnt_BikeBike.append(set([foe, ego]))
+                    elif "bike" in foe or "bike" in ego and set([foe, ego]) not in conflict_cnt_BikeVeh:
+                        conflict_cnt_BikeVeh.append(set([foe, ego]))
+                    elif float(value) <= 1:
+                        conflict_cnt_VehVeh.append(set([foe, ego]))
+                    break
 
-        traci.close()
-        return int(conflict_cnt_BikeBike), int(conflict_cnt_BikeVeh), int(conflict_cnt_VehVeh)
 
+        # traci.close()
+        return len(conflict_cnt_BikeBike), len(conflict_cnt_BikeVeh), len(conflict_cnt_VehVeh)
 
 
     def right_turn_conflicts_measure(self):
@@ -1034,7 +1067,7 @@ class SingleIntersection:
             for lanes in time:
                 for lane in lanes:
                     # TODO: generalize this by changing to multiple intersections so that you could inter_id and use self.paras[inter_id][incoming_bike]
-                    if lane.attrib["id"][-1]=="1":
+                    if lane.attrib["id"] in self.network_graph["1"]["incoming_bike"].keys():
                         queue_bike += float(lane.attrib["queueing_length"])
                         cnt_bike +=1
                     else:

@@ -9,13 +9,15 @@ class SumoNetworkReader:
         self.paras["network_graph"] = self.network_graph
     def read(self):
         data_dir = os.path.dirname(os.path.realpath(__file__)) + "/network_model/"
-        network_file = (data_dir + "single_intersection_bike.net.xml")
+
         if self.paras["ped_phasing"] == "Concurrent":
-            signal_file = (data_dir + "single_intersection_Concurrent.add.xml")
+            network_file = (data_dir + "single_intersection" + "_bike_" + self.paras[
+                "ped_phasing"] + "_" + f"({self.paras["ped_subsetting"]})" + ".net.xml")
+            signal_file = (data_dir + "single_intersection" + "_" + self.paras[
+                "ped_phasing"] + "_" + f"({self.paras["ped_subsetting"]})" + ".add.xml")
         elif self.paras["ped_phasing"] == "Exclusive":
-            signal_file = (data_dir + "single_intersection_Exclusive.add.xml")
-        elif self.paras["ped_phasing"] == "Hybrid":
-            signal_file = (data_dir + "single_intersection_Hybrid.add.xml")
+            network_file = (data_dir + "single_intersection" + "_bike_" + self.paras["ped_phasing"] + ".net.xml")
+            signal_file = (data_dir + "single_intersection" + "_" + self.paras["ped_phasing"] + ".add.xml")
         tree = ET.parse(network_file)
         root = tree.getroot()
 
@@ -93,7 +95,9 @@ class SumoNetworkReader:
                 for phase in element.findall("phase"):
                     if "G" in phase.attrib["state"]:
                         num_phases += 1
-                self.network_graph[inter_id]["num_phases"] = min(9, num_phases) ## TODO: generalize later
+                    else:
+                        break
+                self.network_graph[inter_id]["num_phases"] = num_phases
 
         # find walking areas and crossings adjacent:
         for inter_id in self.network_graph:
