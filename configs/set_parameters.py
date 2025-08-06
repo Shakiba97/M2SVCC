@@ -19,7 +19,7 @@ def set_common_paras(paras):
     # Discount ratio used to stabilize the MPC problem.
     paras["discount_ratio"] = 0.95
     # weighting factor for each mode (for the slower scale problem optimization)(must add up to 1)
-    paras["weight(Vehicles/Pedestrians)"] = (0.5, 0.5)
+    paras["weight(Vehicles/Pedestrians)"] = (0.8, 0.2)
 
     ## IDM model parameters, see Equation (11) in the second paper.
     # Maximum acceleration that the vehicles can reach, in m/s^{2}.
@@ -36,7 +36,7 @@ def set_common_paras(paras):
     paras["penetration"] = 1
     # Concurrent or Exclusive Pedestrian phasing
     paras["ped_phasing"] = "Concurrent" #"Concurrent" or "Exclusive"
-    paras["ped_subsetting"] = "delayed_turn"  ## Concurrent subsettings: permitted_right, protected_right, LPI, delayed_turn
+    paras["ped_subsetting"] = "permitted_right"  ## Concurrent subsettings: permitted_right, protected_right, LPI, delayed_turn
 
     # Random seed used to generate the volume.
     paras["random_seed"] = 1
