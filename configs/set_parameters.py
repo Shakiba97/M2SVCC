@@ -19,7 +19,7 @@ def set_common_paras(paras):
     # Discount ratio used to stabilize the MPC problem.
     paras["discount_ratio"] = 0.95
     # weighting factor for each mode (for the slower scale problem optimization)(must add up to 1)
-    paras["weight(Vehicles/Pedestrians/Bikes)"] = (0.52, 0.1, 0.2)
+    paras["weight(Vehicles/Pedestrians/Bikes)"] = (0.5, 0.1, 0.1)
 
     ## IDM model parameters, see Equation (11) in the second paper.
     # Maximum acceleration that the vechiles can reach, in m/s^{2}.
@@ -41,10 +41,10 @@ def set_common_paras(paras):
 
     ## Simulation parameters.
     # Penetration rate of CAVs.
-    paras["penetration"] = 1
+    paras["penetration"] = 0.25
     # Concurrent or Exclusive Pedestrian phasing
     paras["ped_phasing"] = "Concurrent" #"Exclusive" or "Concurrent" or "Hybrid" (bike concur ped excl)
-    paras["ped_subsetting"] = "delayed_turn"  ## Concurrent subsettings: permitted_right, protected_right, LPI, delayed_turn
+    paras["ped_subsetting"] = "permitted_right"  ## Concurrent subsettings: permitted_right, protected_right, LPI, delayed_turn
     # Random seed used to generate the volume.
     paras["random_seed"] = 1
     # simulation duration.
