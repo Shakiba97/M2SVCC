@@ -1,4 +1,4 @@
-# MMSVCC (Multimodal Multiscale Signal-Vehicle Coupled Control)
+# M2SVCC (Multimodal Multiscale Signal-Vehicle Coupled Control)
 
 ## About
 This project involves the implementation of a MultiModal, MultiScale MPC-based Signal-Vehicle Coupled Control (M2SVCC) model on a single unified 4-leg, 3-lane intersection (inspired by the intersection at Fairview Avenue and Denny Way, Downtown Seattle, WA). The optimization process aims at maximizing throughput, minimizing the total delay of all users and fuel consumption of connected and automated vehicles (CAVs) at signalized intersections.
