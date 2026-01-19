@@ -31,12 +31,12 @@ class MpcAgent:
         self.models_dir = os.path.dirname(os.path.realpath(__file__)) + "/gams_models"
         if not os.path.exists(self.models_dir):
             os.mkdir(self.models_dir)
-        #gams_dir = "/Library/Frameworks/GAMS.framework/Versions/49/Resources/"
+        gams_dir = "/opt/gams48.7"
         #self.ws = GamsWorkspace(self.models_dir, system_directory=gams_dir, debug=1)
-        self.ws = GamsWorkspace(self.models_dir, debug=1)
+        self.ws = GamsWorkspace(self.models_dir, debug=1, system_directory=gams_dir)
         if paras["ped_phasing"] == "Concurrent":
             self.gams_file_slower = (self.models_dir + "/" + intersection_type + "_slower_" + paras[
-                "ped_phasing"] + "_" + f"({paras["ped_subsetting"]})" + ".gms")
+                "ped_phasing"] + "_" + f"({paras['ped_subsetting']})" + ".gms")
         elif paras["ped_phasing"] == "Exclusive":
             self.gams_file_slower = (self.models_dir + "/" + intersection_type + "_slower_" + paras[
                 "ped_phasing"] + ".gms")
