@@ -94,15 +94,7 @@ equations
          ped_phase_equal_3 'pedestrian phase constraint',
 	 ped_phase_equal_4 'pedestrian phase constraint',
          ped_phase_equal_5 'pedestrian phase constraint',
-         ped_phase_equal_6 'pedestrian phase constraint',
-	 bike_phase_equal_1 'bike phase constraint',
-	 bike_phase_equal_2 'bike phase constraint',
-	 bike_phase_equal_3 'bike phase constraint',
-	 bike_phase_equal_4 'bike phase constraint',
-	 bike_phase_equal_5 'bike phase constraint',
-	 bike_phase_equal_6 'bike phase constraint',
-	 bike_phase_equal_7 'bike phase constraint',
-	 bike_phase_equal_8 'bike phase constraint';
+         ped_phase_equal_6 'pedestrian phase constraint';
 
          
 
@@ -183,15 +175,6 @@ ped_phase_equal_3(k)..                                                          
 ped_phase_equal_4(k)..                                                           p('5',k) + p('7',k) + p('9',k) =e= q('1',k);
 ped_phase_equal_5(k)..                                                           p('9',k) =e= q('2',k);
 ped_phase_equal_6(k)..                                                           p('9',k) =e= q('4',k);
-bike_phase_equal_1(k)..								 p('1',k) + p('2',k) =e= x('7',k);
-bike_phase_equal_2(k)..								 p('5',k) + p('6',k) =e= x('1',k);
-bike_phase_equal_3(k)..								 p('1',k) + p('3',k) =e= x('3',k);
-bike_phase_equal_4(k)..								 p('5',k) + p('7',k) =e= x('5',k);
-bike_phase_equal_5(k)..								 x('1',k) =e= x('2',k);
-bike_phase_equal_6(k)..								 x('3',k) =e= x('4',k);
-bike_phase_equal_7(k)..								 x('5',k) =e= x('6',k);
-bike_phase_equal_8(k)..								 x('7',k) =e= x('8',k);
-
 
 *Equation (23h)
 s.up(i,j,k)$vehicle_indi(i,j)= 700;
@@ -199,7 +182,7 @@ s.lo(i,j,k)$vehicle_indi(i,j) = -300;
 s.fx(i,j,"1")$vehicle_indi(i,j) = s_init(i,j);
 p.fx(l,'1') = p_init(l);
 
-model mo /cost, cost_throughput, cost_distance, cost_transition, cost_delay, cost_ped_throughput, cost_bike_throughput, vehicle_dynamics_1, vehicle_dynamics_2, car_following, vehicle_position_1, vehicle_position_2, traffic_rule, signal_rule_1, signal_rule_2, signal_rule_3,signal_rule_4, phase_equal_1, phase_equal_2, phase_equal_3, phase_equal_4, phase_equal_5, phase_equal_6, phase_equal_7, phase_equal_8, phase_equal_9, phase_equal_10, phase_equal_11, phase_equal_12, ped_phase_equal_1, ped_phase_equal_2, ped_phase_equal_3, ped_phase_equal_4, ped_phase_equal_5, ped_phase_equal_6, bike_phase_equal_1, bike_phase_equal_2, bike_phase_equal_3, bike_phase_equal_4, bike_phase_equal_5, bike_phase_equal_6, bike_phase_equal_7, bike_phase_equal_8/;
+model mo /cost, cost_throughput, cost_distance, cost_transition, cost_delay, cost_ped_throughput, cost_bike_throughput, vehicle_dynamics_1, vehicle_dynamics_2, car_following, vehicle_position_1, vehicle_position_2, traffic_rule, signal_rule_1, signal_rule_2, signal_rule_3,signal_rule_4, phase_equal_1, phase_equal_2, phase_equal_3, phase_equal_4, phase_equal_5, phase_equal_6, phase_equal_7, phase_equal_8, phase_equal_9, phase_equal_10, phase_equal_11, phase_equal_12, ped_phase_equal_1, ped_phase_equal_2, ped_phase_equal_3, ped_phase_equal_4, ped_phase_equal_5, ped_phase_equal_6/;
 *model mo /cost, cost_throughput, cost_distance, cost_transition, cost_delay, cost_ped_throughput, cost_bike_throughput, vehicle_dynamics_1, vehicle_dynamics_2, vehicle_position_1, vehicle_position_2, traffic_rule, signal_rule_1, signal_rule_2, signal_rule_3,signal_rule_4, phase_equal_1, phase_equal_2, phase_equal_3, phase_equal_4, phase_equal_5, phase_equal_6, phase_equal_7, phase_equal_8, phase_equal_9, phase_equal_10, phase_equal_11, phase_equal_12, ped_phase_equal_1, ped_phase_equal_2, ped_phase_equal_3, ped_phase_equal_4, ped_phase_equal_5, ped_phase_equal_6, bike_phase_equal_1, bike_phase_equal_2, bike_phase_equal_3, bike_phase_equal_4, bike_phase_equal_5, bike_phase_equal_6, bike_phase_equal_7, bike_phase_equal_8/;
 
 

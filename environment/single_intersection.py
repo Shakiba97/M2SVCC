@@ -141,6 +141,16 @@ class SingleIntersection:
             + str(int(penetration * 100))
             + ".xml"
         )
+        stat_file = (
+            data_dir_next
+            + "/statinfo_"
+            + control_type
+            + "_"
+            + volume_type
+            + "_pene_"
+            + str(int(penetration * 100))
+            + ".xml"
+        )
         SSM_file = (
             data_dir_next
             + "/SSMinfo_"
@@ -161,6 +171,8 @@ class SingleIntersection:
                 queue_file,
                 "--tripinfo-output",
                 trip_file,
+                "--statistic-output",
+                stat_file,
                 '--device.ssm.file=' + SSM_file,
                 "--step-length",
                 "0.5",
@@ -902,14 +914,14 @@ class SingleIntersection:
             raise
 
         if control_type == "multi_scale":
-            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["ped_subsetting"]}_{self.paras["ped_demand_symmetry"]}_{self.paras["weight(Vehicles/Pedestrians/Bikes)"]}_{a}.txt"
+            file_name = f"Results/{control_type}_penetration({self.paras['penetration']})_EVratio({self.paras['ratio_ev']})_{self.paras['ped_phasing']}_{self.paras['ped_subsetting']}_{self.paras['ped_demand_symmetry']}_{self.paras['weight(Vehicles/Pedestrians/Bikes)']}_{a}.txt"
         else:
-            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["ped_subsetting"]}_{self.paras["ped_demand_symmetry"]}_{a}.txt"
+            file_name = f"Results/{control_type}_penetration({self.paras['penetration']})_EVratio({self.paras['ratio_ev']})_{self.paras['ped_phasing']}_{self.paras['ped_subsetting']}_{self.paras['ped_demand_symmetry']}_{a}.txt"
         with open(file_name, 'w') as file:
-            file.write(f"average fuel consumption (external model) for CAVs {control_type} (in mg): {self.fuel_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ice"]),1)}\n")
-            file.write(f"average fuel consumption (external model) for HDVs {control_type} (in mg): {self.fuel_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ice"]),1)}\n")
-            file.write(f"average power consumption (external model) for CAVs {control_type} (in Kw.s): {self.power_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ev"]),1)}\n")
-            file.write(f"average power consumption (external model) for HDVs {control_type} (in Kw.s): {self.power_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ev"]),1)}\n")
+            file.write(f"average fuel consumption (external model) for CAVs {control_type} (in mg): {self.fuel_total_cav_external_model / max(len(self.paras['veh_id_with_ev']['cav_ice']),1)}\n")
+            file.write(f"average fuel consumption (external model) for HDVs {control_type} (in mg): {self.fuel_total_hdv_external_model / max(len(self.paras['veh_id_with_ev']['hdv_ice']),1)}\n")
+            file.write(f"average power consumption (external model) for CAVs {control_type} (in Kw.s): {self.power_total_cav_external_model / max(len(self.paras['veh_id_with_ev']['cav_ev']),1)}\n")
+            file.write(f"average power consumption (external model) for HDVs {control_type} (in Kw.s): {self.power_total_hdv_external_model / max(len(self.paras['veh_id_with_ev']['hdv_ev']),1)}\n")
 
             #file.write(f"average fuel consumption for {control_type} scenario (SUMO output) (in mg): {self.fuel_total_cav_sumo / len(self.paras['cav_ids']['all'])}\n")
             file.write(f"average waiting time for {control_type} scenario (in s): {self.waiting_time_avg}\n")
@@ -924,7 +936,7 @@ class SingleIntersection:
             file.write(f"number of conflicts between vehicles and vehicles: {conflict_cnt_VehVeh}\n")
             file.write(f"number of CAVs passing through the specific intersection in {control_type} scenario: {len(self.paras['cav_ids'])}\n")
             file.write(f"number of pedestrians passing through the specific intersection in {control_type} scenario: {len(self.paras['ped_ids'])}\n")
-            file.write(f"number of Bikes passing through the specific intersection (sep) in {control_type} scenario: {len(self.paras["bike_ids"])}\n")
+            file.write(f"number of Bikes passing through the specific intersection (sep) in {control_type} scenario: {len(self.paras['bike_ids'])}\n")
             file.write(f"The time of simulation termination in {control_type} scenario: {step/2}\n")
             file.write(f"average phase lengths:  {self.phase_avg}\n")
             file.write(f"number of times each phase happened: {self.phase_ntimes}\n")
@@ -933,10 +945,10 @@ class SingleIntersection:
         ## Start SUMO again for the needed traci function.
         if self.paras["ped_phasing"] == "Exclusive":
             model_file = os.path.dirname(os.path.dirname(os.path.realpath(
-                __file__))) + f"/environment/network_model/single_intersection_multi_scale_{self.paras["ped_phasing"]}.sumocfg"
+                __file__))) + f"/environment/network_model/single_intersection_multi_scale_{self.paras['ped_phasing']}.sumocfg"
         else:
             model_file = os.path.dirname(os.path.dirname(os.path.realpath(
-                __file__))) + f"/environment/network_model/single_intersection_multi_scale_{self.paras["ped_phasing"]}_({self.paras["ped_subsetting"]}).sumocfg"
+                __file__))) + f"/environment/network_model/single_intersection_multi_scale_{self.paras['ped_phasing']}_({self.paras['ped_subsetting']}).sumocfg"
         # traci.start(["sumo", "-c", model_file, "--start"])
 
         tree = ET.parse(file)
