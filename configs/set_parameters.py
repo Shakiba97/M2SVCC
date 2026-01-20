@@ -41,7 +41,7 @@ def set_common_paras(paras):
 
     ## Simulation parameters.
     # Penetration rate of CAVs.
-    paras["penetration"] = 0.25
+    paras["penetration"] = 1
     # Concurrent or Exclusive Pedestrian phasing
     paras["ped_phasing"] = "Concurrent" #"Exclusive" or "Concurrent" or "Hybrid" (bike concur ped excl)
     paras["ped_subsetting"] = "permitted_right"  ## Concurrent subsettings: permitted_right, protected_right, LPI, delayed_turn
