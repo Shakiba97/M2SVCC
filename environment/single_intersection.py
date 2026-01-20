@@ -1087,7 +1087,7 @@ class SingleIntersection:
                         cnt += 1
         #print("queue cnt: ", cnt)
         self.queue_avg = queue / cnt
-        self.queue_avg_bike = queue_bike / cnt_bike
+        self.queue_avg_bike = queue_bike / max(cnt_bike, 1)
 
 
     def calculate_extra_metrics(self):
