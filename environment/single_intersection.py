@@ -130,6 +130,8 @@ class SingleIntersection:
                 sumoBinary,
                 "-c",
                 model_file_name,
+                "--seed",
+                str(self.paras["sumo_seed"]),
                 "--start",
                 "--queue-output",
                 queue_file,
@@ -513,14 +515,14 @@ class SingleIntersection:
             raise
 
         if control_type == "multi_scale":
-            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["weight(Vehicles/Pedestrians)"]}_{a}.txt"
+            file_name = f"Results/{control_type}_penetration({self.paras['penetration']})_EVratio({self.paras['ratio_ev']})_{self.paras['ped_phasing']}_{self.paras['weight(Vehicles/Pedestrians)']}_{a}_seed({self.paras['sumo_seed']}).txt"
         else:
-            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{a}.txt"
+            file_name = f"Results/{control_type}_penetration({self.paras['penetration']})_EVratio({self.paras['ratio_ev']})_{a}_seed({self.paras['sumo_seed']}).txt"
         with open(file_name, 'w') as file:
-            file.write(f"average fuel consumption (external model) for CAVs {control_type} (in mg): {self.fuel_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ice"]),1)}\n")
-            file.write(f"average fuel consumption (external model) for HDVs {control_type} (in mg): {self.fuel_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ice"]),1)}\n")
-            file.write(f"average power consumption (external model) for CAVs {control_type} (in Kw.s): {self.power_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ev"]),1)}\n")
-            file.write(f"average power consumption (external model) for HDVs {control_type} (in Kw.s): {self.power_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ev"]),1)}\n")
+            file.write(f"average fuel consumption (external model) for CAVs {control_type} (in mg): {self.fuel_total_cav_external_model / max(len(self.paras['veh_id_with_ev']['cav_ice']),1)}\n")
+            file.write(f"average fuel consumption (external model) for HDVs {control_type} (in mg): {self.fuel_total_hdv_external_model / max(len(self.paras['veh_id_with_ev']['hdv_ice']),1)}\n")
+            file.write(f"average power consumption (external model) for CAVs {control_type} (in Kw.s): {self.power_total_cav_external_model / max(len(self.paras['veh_id_with_ev']['cav_ev']),1)}\n")
+            file.write(f"average power consumption (external model) for HDVs {control_type} (in Kw.s): {self.power_total_hdv_external_model / max(len(self.paras['veh_id_with_ev']['hdv_ev']),1)}\n")
 
             #file.write(f"average fuel consumption for {control_type} scenario (SUMO output) (in mg): {self.fuel_total_cav_sumo / len(self.paras['cav_ids']['all'])}\n")
             file.write(f"average waiting time for {control_type} scenario (in s): {self.waiting_time_avg}\n")
@@ -775,7 +777,7 @@ class SingleIntersection:
                 for opposite_dir in opposite_directions: # check delay-based termination according to opposite phase
                     if next_edge in self.cross_map.keys() and self.cross_map[next_edge] == opposite_dir:
                         ped_demand[(self.cur_phase[inter_id] + 4) % 8] += 1
-                        if traci.person.getWaitingTime(ped)>=25:  # if the pedestrians on the opposite phase are waiting for at least 15s, don't do the extension
+                        if traci.person.getWaitingTime(ped)>=20:  # if the pedestrians on the opposite phase are waiting for at least 15s, don't do the extension
                             #print("delay: ", traci.person.getWaitingTime(ped))
                             opposite_phase_delay = True
 
