@@ -30,3 +30,8 @@ The whole process is summarized in the diagram below:
 
  
 Detailed documentiations of the algorithm can be found in /Slides/documentation.docx.  
+
+## Contributers
+- Qiangqiang Guo
+- Shakiba Naderian (naderian@uw.edu)
+
