@@ -30,7 +30,7 @@ The whole process is summarized in the diagram below:
 
 
 ## Real-world testing and results
-
+![Deployment at Mcity physical automated vehicle testbed, University of Michigan](Slides/Screencast\from\2024-07-09\12-28-35.mp4)
  
 Detailed documentiations of the algorithm can be found in /Slides/documentation.docx.  
 
