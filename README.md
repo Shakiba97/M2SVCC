@@ -1,7 +1,7 @@
 # M2SVCC (Multimodal Multiscale Signal-Vehicle Coupled Control)
 
 ## About
-This project involves the implementation of a MultiModal, MultiScale Signal-Vehicle Coupled Control (M2SVCC) model on a single unified 4-leg, 3-lane intersection (inspired by the intersection at Fairview Avenue and Denny Way, Downtown Seattle, WA). The optimization process includes solving a Model Predictive Control approach on a MINLP problem that aims at maximizing throughput, minimizing the total delay of all users and fuel consumption of connected and automated vehicles (CAVs) at signalized intersections.
+This project implements a Model Predictive Control (MPC)–based Mixed-Integer Nonlinear Programming (MINLP) **optimization framework** for multimodal signal–vehicle coupled control with Connected and Automated Vehicles (CAVs). Within a Python-based environment, the system operates in a closed loop where traffic states are continuously updated through SUMO, optimized control actions are generated using GAMS, and the resulting signal timings and vehicle trajectories are fed back into the simulation for real-time control. The framework jointly optimizes traffic signal timing and CAV trajectories to maximize throughput, minimize user delays, and reduce fuel and energy consumption at signalized intersections, and has been successfully **deployed and validated in the real-world** Mcity Test Facility.
 
 ## Requirements
 Python 3.12   
@@ -27,6 +27,9 @@ Please follow the instruction on [this link](https://www.gams.com/latest/docs/AP
 The whole process is summarized in the diagram below:  
 
 ![MPC Agent Diagram](Slides/Diagram2.png)
+
+
+## Real-world testing and results
 
  
 Detailed documentiations of the algorithm can be found in /Slides/documentation.docx.  
