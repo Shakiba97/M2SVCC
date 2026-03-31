@@ -30,7 +30,7 @@ The whole process is summarized in the diagram below:
 
 
 ## Real-world testing and results
-[](Slides/Screencast%20from%202024-07-09%2012-28-35.mp4)
+[](Slides/Screencast-from-2024-07-09-12-28-35.gif)
 
 Detailed documentiations of the algorithm can be found in /Slides/documentation.docx.  
 
