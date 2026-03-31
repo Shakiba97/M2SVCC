@@ -20,31 +20,6 @@ Within a Python-based environment, the system operates in a closed loop where tr
 | gamsapi | matched to GAMS 46.5 | Installed via GAMS installer, not pip |
 | traci | latest | Bundled with SUMO |
 | sumolib | latest | Bundled with SUMO |
-  
-To change the scenario, edit the bottom of `main.py`:
-
-```python
-if __name__ == "__main__":
-    main(
-        network_type="single_intersection",
-        volume_type="asymmetric",   # "symmetric" | "asymmetric"
-        control_type="multi_scale"  # "multi_scale" | "actuated" | "fixed_time"
-    )
-```
-  
-> **Signal phasing** (concurrent vs exclusive) and **turning treatment** (permitted, protected, LPI/LBI, delayed right turn) are configured in `configs/set_parameters.py`.
-
-## Key parameters (`configs/set_parameters.py`)
-
-| Parameter | Description | Options |
-|---|---|---|
-| `phasing` | Active user crossing type | `concurrent`, `exclusive` |
-| `turning_treatment` | Vehicle-pedestrian conflict handling | `permitted`, `protected`, `LPI`, `LBI`, `delayed` |
-| `bike_mode` | Cyclist infrastructure | `separated`, `mixed` |
-| `vehicle_types` | Powertrain mix | `ICE`, `hybrid`, `EV` (combinable) |
-| `ped_demand` | Pedestrian arrival rate | float (veh/s) |
-| `bike_demand` | Cyclist arrival rate | float (veh/s) |
-
 
 ## Structure
 
@@ -70,6 +45,31 @@ M2SVCC/
     └── documentation.docx       # Detailed algorithm documentation
 ```
 
+
+## Usage
+To change the scenario, edit the bottom of `main.py`:
+
+```python
+if __name__ == "__main__":
+    main(
+        network_type="single_intersection",
+        volume_type="asymmetric",   # "symmetric" | "asymmetric"
+        control_type="multi_scale"  # "multi_scale" | "actuated" | "fixed_time"
+    )
+```
+  
+> **Signal phasing** (concurrent vs exclusive) and **turning treatment** (permitted, protected, LPI/LBI, delayed right turn) are configured in `configs/set_parameters.py`.
+
+#### Key parameters (`configs/set_parameters.py`)
+
+| Parameter | Description | Options |
+|---|---|---|
+| `phasing` | Active user crossing type | `concurrent`, `exclusive` |
+| `turning_treatment` | Vehicle-pedestrian conflict handling | `permitted`, `protected`, `LPI`, `LBI`, `delayed` |
+| `bike_mode` | Cyclist infrastructure | `separated`, `mixed` |
+| `vehicle_types` | Powertrain mix | `ICE`, `hybrid`, `EV` (combinable) |
+| `ped_demand` | Pedestrian arrival rate | float (veh/s) |
+| `bike_demand` | Cyclist arrival rate | float (veh/s) |
 
 ## Real-world testing and results
 Deployment at Mcity physical automated vehicle testbed, University of Michigan:  
