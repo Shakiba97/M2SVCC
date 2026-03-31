@@ -8,7 +8,7 @@ The whole process is summarized in the diagram below:
 ![MPC Agent Diagram](Slides/Diagram2.png)
 Within a Python-based environment, the system operates in a closed loop where traffic states are continuously updated through SUMO, optimized control actions are generated using GAMS, and the resulting signal timings and vehicle trajectories are fed back into the simulation for real-time control
 
----
+
 ## Requirements
 | Dependency | Version | Notes |
 |------------|---------|-------|
