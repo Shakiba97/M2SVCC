@@ -67,7 +67,7 @@ if __name__ == "__main__":
 | `phasing` | Active user crossing type | `concurrent`, `exclusive` |
 | `turning_treatment` | Vehicle-pedestrian conflict handling | `permitted`, `protected`, `LPI`, `LBI`, `delayed` |
 | `bike_mode` | Cyclist infrastructure | `separated`, `mixed` |
-| `vehicle_types` | Powertrain mix | `ICE`, `hybrid`, `EV` (combinable) |
+| `vehicle_types` | Powertrain mix | `ICE`, `EV` (combinable) |
 | `ped_demand` | Pedestrian arrival rate | float (veh/s) |
 | `bike_demand` | Cyclist arrival rate | float (veh/s) |
 
@@ -76,7 +76,12 @@ Deployment at Mcity physical automated vehicle testbed, University of Michigan:
 ![Deployment at Mcity physical automated vehicle testbed, University of Michigan](Slides/Screencast-from-2024-07-09-12-28-35.gif)
 
 #### Performance Metrics:  
+Results are written to `Results/` at the end of each simulation run. Metrics include:
 
+- Total and per-mode loss time, waiting time, and queue length (vehicles, pedestrians, cyclists)
+- Fuel and energy consumption by vehicle type (ICE, EV)
+- Traffic conflict counts (safety metric)
+  
 evaluated performance in simulation and real-world deployment (Mcity testbed), achieving >25% improvement in system efficiency:
 <table>
   <tr>
@@ -88,6 +93,7 @@ evaluated performance in simulation and real-world deployment (Mcity testbed), a
     </td>
   </tr>
 </table>
+
 
 ## Contributors
 
