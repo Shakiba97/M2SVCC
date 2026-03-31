@@ -36,6 +36,7 @@ Deployment at Mcity physical automated vehicle testbed, University of Michigan:
 
 #### Performance Metrics:  
 
+evaluated performance in simulation and real-world deployment (Mcity testbed), achieving >25% improvement in system efficiency:
 <p align="center">
   <img src="Slides/Picture1.png" width="500">
 </p>
