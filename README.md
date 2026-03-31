@@ -45,7 +45,6 @@ if __name__ == "__main__":
 | `ped_demand` | Pedestrian arrival rate | float (veh/s) |
 | `bike_demand` | Cyclist arrival rate | float (veh/s) |
 
----
 
 ## Structure
 
@@ -71,7 +70,6 @@ M2SVCC/
     └── documentation.docx       # Detailed algorithm documentation
 ```
 
----
 
 ## Real-world testing and results
 Deployment at Mcity physical automated vehicle testbed, University of Michigan:  
@@ -80,18 +78,22 @@ Deployment at Mcity physical automated vehicle testbed, University of Michigan:
 #### Performance Metrics:  
 
 evaluated performance in simulation and real-world deployment (Mcity testbed), achieving >25% improvement in system efficiency:
-<p align="center">
-  <img src="Slides/Picture1.png" width="500" style="margin-right: 10px;">
-  <img src="Slides/Picture2.png" width="500">
-</p>
+<table>
+  <tr>
+    <td align="center">
+      <img src="Slides/Picture1.png" width="400">
+    </td>
+    <td align="center">
+      <img src="Slides/Picture2.png" width="400">
+    </td>
+  </tr>
+</table>
 
 ## Contributors
 
 - **Shakiba Naderian** · University of Washington · [naderian@uw.edu](mailto:naderian@uw.edu)
 - **Qiangqiang Guo** · Google · [guoqq77@gmail.com](mailto:guoqq77@gmail.com)
 - **Xuegang (Jeff) Ban** · University of Washington
-
----
 
 ## Related work
 
