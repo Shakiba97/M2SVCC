@@ -20,42 +20,7 @@ Within a Python-based environment, the system operates in a closed loop where tr
 | gamsapi | matched to GAMS 46.5 | Installed via GAMS installer, not pip |
 | traci | latest | Bundled with SUMO |
 | sumolib | latest | Bundled with SUMO |
-
----
-
-### Installation
-**1. Clone the repo**
-```bash
-git clone https://github.com/Shakiba97/M2SVCC.git
-cd M2SVCC
-```
-
-**2. Install GAMS and configure the Python API**
-
-Download GAMS 46.5 from https://www.gams.com/download/ and follow the [Python API setup guide](https://www.gams.com/latest/docs/API_PY_GETTING_STARTED.html). The `gamsapi` package must be installed from the GAMS distribution, not PyPI.
-
-**3. Install SUMO**
-
-Download SUMO 1.20.0 from https://eclipse.dev/sumo/ and set the environment variable:
-```bash
-export SUMO_HOME=/path/to/sumo   # Linux/macOS
-set SUMO_HOME=C:\path\to\sumo    # Windows
-```
-
-**4. Install Python dependencies**
-```bash
-pip install -r Requirements.txt
-```
-
----
-## Usage
-
-The main entry point accepts three arguments: `network_type`, `volume_type`, and `control_type`.
-
-```bash
-python main.py
-```
-
+  
 To change the scenario, edit the bottom of `main.py`:
 
 ```python
@@ -66,16 +31,7 @@ if __name__ == "__main__":
         control_type="multi_scale"  # "multi_scale" | "actuated" | "fixed_time"
     )
 ```
-
-### Reproducing paper scenarios
-
-| Paper scenario | `volume_type` | `control_type` | Notes |
-|---|---|---|---|
-| M²SVCC baseline | `asymmetric` | `multi_scale` | Main result |
-| Symmetric demand | `symmetric` | `multi_scale` | |
-| Actuated benchmark | `asymmetric` | `actuated` | Comparison baseline |
-| Fixed-time benchmark | `asymmetric` | `fixed_time` | Comparison baseline |
-
+  
 > **Signal phasing** (concurrent vs exclusive) and **turning treatment** (permitted, protected, LPI/LBI, delayed right turn) are configured in `configs/set_parameters.py`.
 
 ## Key parameters (`configs/set_parameters.py`)
@@ -141,9 +97,9 @@ evaluated performance in simulation and real-world deployment (Mcity testbed), a
 
 This project builds on the unimodal SVCC framework introduced in:
 
-> Guo, Q., & Ban, X. (2023). *A multi-scale control framework for urban traffic control with connected and automated vehicles* Transportation Research Part B. [doi:10.1016/j.trb.2023...](https://www.sciencedirect.com/science/article/abs/pii/S0191261523001121)
+> Guo, Q., & Ban, X. (2023). *A multi-scale control framework for urban traffic control with connected and automated vehicles* Transportation Research Part B. [(link)](https://www.sciencedirect.com/science/article/abs/pii/S0191261523001121)
 
 Real-world validation of the base SVCC model was conducted at the Mcity connected and automated testbed:
 
-> Naderian, S., et al. (2025). *Testing Multiscale Signal-Vehicle Coupled Control with Connected and Automated Vehicles through remote access of Mcity 2.0*[paper](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5202811)
+> Naderian, S., et al. (2025). *Testing Multiscale Signal-Vehicle Coupled Control with Connected and Automated Vehicles through remote access of Mcity 2.0* [(link)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5202811)
 
