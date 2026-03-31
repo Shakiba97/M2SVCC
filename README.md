@@ -33,9 +33,7 @@ The whole process is summarized in the diagram below:
 Deployment at Mcity physical automated vehicle testbed, University of Michigan:  
 ![Deployment at Mcity physical automated vehicle testbed, University of Michigan](Slides/Screencast-from-2024-07-09-12-28-35.gif)
 
-#### performance metrics  
-![results](Slides/Picture1.png)
-
+  
 Detailed documentiations of the algorithm can be found in /Slides/documentation.docx.  
 
 ## Contributers
