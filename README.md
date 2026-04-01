@@ -74,16 +74,17 @@ if __name__ == "__main__":
 ## Key Results
 
 ### Single intersection (SUMO simulation)
+The intersection on Denny Way and Faireview, Downtown Seattle, Washington:
 <p align="center">
   <img src="Results/pics/Picture1.png" width="60%"/>
 </p>
 
-Compared to an actuated signal baseline (permitted right), M²SVCC achieves the following under **medium active user demand** in the concurrent-permitted setting:  
 #### Performance Metrics:  
 - Total and per-mode loss time, waiting time, and queue length (vehicles, pedestrians, cyclists)
 - Fuel and energy consumption by vehicle type (ICE, EV)
 - Traffic conflict counts (safety metric)
 
+Compared to an actuated signal baseline (permitted right), M²SVCC achieves the following under medium active user demand in the concurrent-permitted setting:  
 | Metric | Actuated | M²SVCC | Improvement |
 |---|---|---|---|
 | Fuel consumption (mg/veh) | ~103 | ~68 | **~34%** |
@@ -94,8 +95,7 @@ Compared to an actuated signal baseline (permitted right), M²SVCC achieves the 
 | Pedestrian time loss (s/ped) | ~48 | ~37 | **~24%** |
 | Veh–pedestrian conflicts | 261 | 231 | **~11%** |
 
-Sustainability improvements (fuel and energy reduction) are consistent **across all signal settings and EV penetration rates (0–100%)**.
-
+Sustainability improvements (fuel and energy reduction) are consistent across all signal settings.
 The framework also exposes clear policy trade-offs:
 - **Concurrent-permitted right**: best overall mobility for all modes
 - **Concurrent-protected right**: best safety for active users under high demand
