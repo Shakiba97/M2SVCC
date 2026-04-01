@@ -3,6 +3,30 @@
 ## About
 This project implements a Model Predictive Control (MPC)–based Mixed-Integer Nonlinear Programming (MINLP) **optimization framework** for multimodal signal–vehicle coupled control with Connected and Automated Vehicles (CAVs). The framework jointly optimizes traffic signal timing and CAV trajectories to maximize throughput, minimize user delays, and reduce fuel and energy consumption at signalized intersections, and has been successfully **deployed and validated in the real-world** Mcity Test Facility.
 
+### Two-timescale MPC decomposition
+
+The core design challenge is that signal control and vehicle trajectory control operate on incompatible timescales: signals must be planned over longer horizons (seconds to minutes) while smooth, safe vehicle trajectories require sub-second precision. M²SVCC resolves this with a **hierarchical decomposition** into two coupled optimization problems, coordinated by a rolling-horizon MPC scheme.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│           MPC rolling horizon (repeats every 5s)        │
+│                                                         │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │  SLOWER SCALE  (~5s steps)  — MILP / GAMS-SCIP   │   │
+│  │  Optimize: signal phases + vehicle sequences     │   │
+│  │  Objective: weighted delay for all modes         │   │
+│  │  Output: phase plan + coarse trajectories        │   │
+│  └────────────────────┬─────────────────────────────┘   │
+│                       │  consistency constraints        │
+│  ┌────────────────────▼─────────────────────────────┐   │
+│  │  FASTER SCALE  (~0.5s steps) — NLP / GAMS-IPOPT  │   │
+│  │  Optimize: per-vehicle acceleration profiles     │   │
+│  │  Objective: fuel (ICE) + energy (EV/HEV)         │   │
+│  │  Output: smooth CAV trajectories                 │   │
+│  └──────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
+
 The whole process is summarized in the diagram below:  
 
 ![MPC Agent Diagram](Slides/Diagram2.png)
@@ -22,7 +46,6 @@ Within a Python-based environment, the system operates in a closed loop where tr
 | sumolib | latest | Bundled with SUMO |
 
 ## Structure
-
 ```
 M2SVCC/
 ├── main.py                      # Entry point — configure and run a scenario here
@@ -46,17 +69,20 @@ M2SVCC/
 ```
 
 
-## Usage
-To change the scenario, edit the bottom of `main.py`:
+## Running the Model
 
-```python
-if __name__ == "__main__":
-    main(
-        network_type="single_intersection",
-        volume_type="asymmetric",   # "symmetric" | "asymmetric"
-        control_type="multi_scale"  # "multi_scale" | "actuated" | "fixed_time"
-    )
+```bash
+python main.py
 ```
+
+The script will:
+1. Initialize the SUMO intersection environment and load network parameters from `configs/`
+2. Start the MPC loop: at each step, solve the slower-scale **MILP** (signal timing + vehicle sequences) in GAMS, then solve the faster-scale **NLP** (trajectory refinement) in GAMS
+3. Feed the optimized control actions back to SUMO via TraCI
+4. Log mobility, safety, and sustainability metrics to `Results/`
+
+Ensure GAMS and SUMO are installed and accessible on your `PATH` before running.
+
   
 > **Signal phasing** (concurrent vs exclusive) and **turning treatment** (permitted, protected, LPI/LBI, delayed right turn) are configured in `configs/set_parameters.py`.
 
@@ -106,7 +132,7 @@ The framework also exposes clear policy trade-offs:
   <img src="Results/pics/Picture2.png" width="90%"/>
 </p>
 
-### Mcity network real-world testing 
+### Mcity network real-world testing, University of Michigan, Michigan
 Deployment at Mcity physical automated vehicle testbed, University of Michigan:  
 ![Deployment at Mcity physical automated vehicle testbed, University of Michigan](Slides/Screencast-from-2024-07-09-12-28-35.gif)
 
