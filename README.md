@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
 ### Single intersection (SUMO simulation)
 <p align="center">
-  <img src="REsults/pics/Picture1.png" width="60%"/>
+  <img src="Results/pics/Picture1.png" width="60%"/>
 </p>
 
 Compared to an actuated signal baseline (permitted right), M²SVCC achieves the following under **medium active user demand** in the concurrent-permitted setting:  
@@ -103,7 +103,7 @@ The framework also exposes clear policy trade-offs:
 - **Concurrent-delayed turn**: most balanced across all three dimensions
 
 <p align="center">
-  <img src="REsults/pics/Picture2.png" width="90%"/>
+  <img src="Results/pics/Picture2.png" width="90%"/>
 </p>
 
 ### Mcity network real-world testing 
