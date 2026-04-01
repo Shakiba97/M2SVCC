@@ -71,17 +71,45 @@ if __name__ == "__main__":
 | `ped_demand` | Pedestrian arrival rate | float (veh/s) |
 | `bike_demand` | Cyclist arrival rate | float (veh/s) |
 
-## Real-world testing and results
-Deployment at Mcity physical automated vehicle testbed, University of Michigan:  
-![Deployment at Mcity physical automated vehicle testbed, University of Michigan](Slides/Screencast-from-2024-07-09-12-28-35.gif)
+## Key Results
 
+### Single intersection (SUMO simulation)
+<p align="center">
+  <img src="REsults/pics/Picture1.png" width="60%"/>
+</p>
+
+Compared to an actuated signal baseline (permitted right), M²SVCC achieves the following under **medium active user demand** in the concurrent-permitted setting:  
 #### Performance Metrics:  
-Results are written to `Results/` at the end of each simulation run. Metrics include:
-
 - Total and per-mode loss time, waiting time, and queue length (vehicles, pedestrians, cyclists)
 - Fuel and energy consumption by vehicle type (ICE, EV)
 - Traffic conflict counts (safety metric)
-  
+
+| Metric | Actuated | M²SVCC | Improvement |
+|---|---|---|---|
+| Fuel consumption (mg/veh) | ~103 | ~68 | **~34%** |
+| Vehicle waiting time (s/veh) | ~44 | ~38 | **~14%** |
+| Vehicle time loss (s/veh) | ~67 | ~56 | **~16%** |
+| Bike waiting time (s/bike) | ~36 | ~23 | **~35%** |
+| Bike time loss (s/bike) | ~48 | ~34 | **~29%** |
+| Pedestrian time loss (s/ped) | ~48 | ~37 | **~24%** |
+| Veh–pedestrian conflicts | 261 | 231 | **~11%** |
+
+Sustainability improvements (fuel and energy reduction) are consistent **across all signal settings and EV penetration rates (0–100%)**.
+
+The framework also exposes clear policy trade-offs:
+- **Concurrent-permitted right**: best overall mobility for all modes
+- **Concurrent-protected right**: best safety for active users under high demand
+- **Exclusive phase**: eliminates vehicle–pedestrian conflicts entirely under high demand (conflicts → 0)
+- **Concurrent-delayed turn**: most balanced across all three dimensions
+
+<p align="center">
+  <img src="REsults/pics/Picture2.png" width="90%"/>
+</p>
+
+### Mcity network real-world testing 
+Deployment at Mcity physical automated vehicle testbed, University of Michigan:  
+![Deployment at Mcity physical automated vehicle testbed, University of Michigan](Slides/Screencast-from-2024-07-09-12-28-35.gif)
+
 evaluated performance in simulation and real-world deployment (Mcity testbed), achieving >25% improvement in system efficiency:
 <table>
   <tr>
