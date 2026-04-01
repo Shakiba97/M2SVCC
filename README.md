@@ -3,30 +3,6 @@
 ## About
 This project implements a Model Predictive Control (MPC)–based Mixed-Integer Nonlinear Programming (MINLP) **optimization framework** for multimodal signal–vehicle coupled control with Connected and Automated Vehicles (CAVs). The framework jointly optimizes traffic signal timing and CAV trajectories to maximize throughput, minimize user delays, and reduce fuel and energy consumption at signalized intersections, and has been successfully **deployed and validated in the real-world** Mcity Test Facility.
 
-### Two-timescale MPC decomposition
-
-The core design challenge is that signal control and vehicle trajectory control operate on incompatible timescales: signals must be planned over longer horizons (seconds to minutes) while smooth, safe vehicle trajectories require sub-second precision. M²SVCC resolves this with a **hierarchical decomposition** into two coupled optimization problems, coordinated by a rolling-horizon MPC scheme.
-
-```
-┌─────────────────────────────────────────────────────────┐
-│           MPC rolling horizon (repeats every 5s)        │
-│                                                         │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │  SLOWER SCALE  (~5s steps)  — MILP / GAMS-SCIP   │   │
-│  │  Optimize: signal phases + vehicle sequences     │   │
-│  │  Objective: weighted delay for all modes         │   │
-│  │  Output: phase plan + coarse trajectories        │   │
-│  └────────────────────┬─────────────────────────────┘   │
-│                       │  consistency constraints        │
-│  ┌────────────────────▼─────────────────────────────┐   │
-│  │  FASTER SCALE  (~0.5s steps) — NLP / GAMS-IPOPT  │   │
-│  │  Optimize: per-vehicle acceleration profiles     │   │
-│  │  Objective: fuel (ICE) + energy (EV/HEV)         │   │
-│  │  Output: smooth CAV trajectories                 │   │
-│  └──────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-```
-
 The whole process is summarized in the diagram below:  
 
 ![MPC Agent Diagram](Slides/Diagram2.png)
