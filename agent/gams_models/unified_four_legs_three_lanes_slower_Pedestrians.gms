@@ -36,6 +36,8 @@ $gdxin
 
 variable
          f 'cost function',
+         f_ped 'cost ped',
+         f_veh 'cost veh',
          f_throughput 'throughput cost',
          f_dist 'distance cost',
          f_transit 'phase transition cost',
@@ -54,6 +56,8 @@ binary variable
 
 equations
          cost 'cost function',
+         cost_ped 'cost ped',
+         cost_veh 'cost veh',
          cost_throughput 'throughput cost function',
          cost_distance 'traveled distance cost function',
          cost_transition 'lphase transition cost function',
@@ -99,7 +103,9 @@ I guess g here is not same as in the paper. 1 if passed, 0 if did not pass.
 
 you can add pedestrian delay too if this enough did not work
 $offtext
-cost..                                                                           f =e= Wv*[f_throughput + f_dist/100 + f_transit*5 + f_delay/50]/100 + Wp*[5*f_ped_throughput/10]/100;
+cost..                                                                           f =e= Wv*[f_veh] + Wp*[f_ped];
+cost_ped..									 f_ped =e= [5*f_ped_throughput]/max(1, sum(m, sum(k, ped_Demand(m,k))));
+cost_veh..									 f_veh =e= [f_throughput + f_dist/100 + f_transit*5 + f_delay/50]/max(1, card(i) * card(k));
 cost_throughput..                                                                f_throughput =e= sum(vehicle_indi(i,j), sum(k, (1-g(i,j,k))));
 cost_distance..                                                                  f_dist =e= -sum(vehicle_indi(i,j), sum(k, (s(i,j,k) - s_init(i,j))*gamma(k))) / sum(i, sum(j, vehicle_indi(i,j)));
 cost_transition..                                                                f_transit =e= sum(l, sum(k, p_c(l,k)));
@@ -170,7 +176,7 @@ s.fx(i,j,"1")$vehicle_indi(i,j) = s_init(i,j);
 p.fx(l,'1') = p_init(l);
 
 *model mo /cost, cost_throughput, cost_distance, cost_transition, cost_delay, cost_ped_throughput, signal_rule_1, signal_rule_2, signal_rule_3,signal_rule_4, ped_phase_equal_1, ped_phase_equal_2, ped_phase_equal_3, ped_phase_equal_4/;
-model mo /cost, cost_throughput, cost_distance, cost_transition, cost_delay, cost_ped_throughput, vehicle_dynamics_1, vehicle_dynamics_2, car_following, vehicle_position_1, vehicle_position_2, traffic_rule, signal_rule_1, signal_rule_2, signal_rule_3,signal_rule_4, phase_equal_1, phase_equal_2, phase_equal_3, phase_equal_4, phase_equal_5, phase_equal_6, phase_equal_7, phase_equal_8, phase_equal_9, phase_equal_10, phase_equal_11, phase_equal_12, ped_phase_equal_1, ped_phase_equal_2, ped_phase_equal_3, ped_phase_equal_4, ped_phase_equal_5, ped_phase_equal_6/;
+model mo /cost, cost_ped, cost_veh, cost_throughput, cost_distance, cost_transition, cost_delay, cost_ped_throughput, vehicle_dynamics_1, vehicle_dynamics_2, car_following, vehicle_position_1, vehicle_position_2, traffic_rule, signal_rule_1, signal_rule_2, signal_rule_3,signal_rule_4, phase_equal_1, phase_equal_2, phase_equal_3, phase_equal_4, phase_equal_5, phase_equal_6, phase_equal_7, phase_equal_8, phase_equal_9, phase_equal_10, phase_equal_11, phase_equal_12, ped_phase_equal_1, ped_phase_equal_2, ped_phase_equal_3, ped_phase_equal_4, ped_phase_equal_5, ped_phase_equal_6/;
 
 *model mo /cost, cost_throughput, cost_distance, cost_transition, cost_delay, cost_ped_throughput, vehicle_dynamics_1, vehicle_dynamics_2, car_following, vehicle_position_1, vehicle_position_2, traffic_rule, signal_rule_1, signal_rule_2, signal_rule_3,signal_rule_4, phase_equal_1, phase_equal_2, phase_equal_3, phase_equal_4, phase_equal_5, phase_equal_6, phase_equal_7, phase_equal_8, phase_equal_9, phase_equal_10, phase_equal_11, phase_equal_12/;
 

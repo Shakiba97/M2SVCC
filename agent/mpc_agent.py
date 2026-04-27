@@ -65,6 +65,8 @@ class MpcAgent:
         }
 
         self.f=[]
+        self.f_ped=[]
+        self.f_veh=[]
         self.f_throughput=[]
         self.f_dist=[]
         self.f_transit=[]
@@ -314,6 +316,10 @@ class MpcAgent:
         ## Collect solutions
         for item in self.model_slower.out_db["f"]:
             self.f.append(item.level)
+        for item in self.model_slower.out_db["f_ped"]:
+            self.f_ped.append(item.level)
+        for item in self.model_slower.out_db["f_veh"]:
+            self.f_veh.append(item.level)
         for item in self.model_slower.out_db["f_throughput"]:
             self.f_throughput.append(item.level)
         # print("f_throughput: ",sum(self.f_throughput)/len(self.f_throughput))
@@ -342,8 +348,8 @@ class MpcAgent:
         #                         sum(self.f_delay)/len(self.f_delay)/50)
         # print("pedestrian Cost: ",  sum(self.f_ped_throughput)/len(self.f_ped_throughput)*5)
         # print("Mean of ped times veh values: ", sum(self.ped_times_veh)/len(self.ped_times_veh))
-        print("Vehicle cost at this point: ", self.f_throughput[-1]+self.f_dist[-1]/100+self.f_transit[-1]*5+self.f_delay[-1]/50)
-        print("Pedestrian cost at this point: ", self.f_ped_throughput[-1]*5)
+        print("Vehicle cost at this point: ", self.f_veh[-1])
+        print("Pedestrian cost at this point: ", self.f_ped[-1])
         print("objective function at this point:", self.f[-1])
 
         for rec in self.model_slower.out_db["p"]:
