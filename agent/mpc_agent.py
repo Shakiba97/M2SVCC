@@ -31,9 +31,8 @@ class MpcAgent:
         self.models_dir = os.path.dirname(os.path.realpath(__file__)) + "/gams_models"
         if not os.path.exists(self.models_dir):
             os.mkdir(self.models_dir)
-        #gams_dir = "/Library/Frameworks/GAMS.framework/Versions/49/Resources/"
-        #self.ws = GamsWorkspace(self.models_dir, system_directory=gams_dir, debug=1)
-        self.ws = GamsWorkspace(self.models_dir, debug=1)
+        gams_dir = "/opt/gams"
+        self.ws = GamsWorkspace(self.models_dir, system_directory=gams_dir, debug=1)
         if paras["ped_phasing"] == "Concurrent":
             self.gams_file_slower = (self.models_dir + "/" + intersection_type + "_slower_Pedestrians.gms")
         elif paras["ped_phasing"] == "Exclusive":
@@ -441,6 +440,9 @@ class MpcAgent:
                             crossing_width = self.paras["network_graph"][inter_id]["crossing"][cross]["width"]
                             minimum_green = 3.2 + crossing_length / self.paras['ped_speed'] + 2.7 * ped_demand[cross] / (crossing_width * 3.28)
                             Gp = max(Gp, minimum_green)
+                        if self.paras["weight(Vehicles/Pedestrians)"][1] == 0: #for vehicle-only control there is no pedestrian demand responsive phase
+                            Gp = 20
+
                     #print("Gp: ", Gp)
                     # Gp= 0
                     self.extension_steps = max(int(Gp / self.delta_T), 1)

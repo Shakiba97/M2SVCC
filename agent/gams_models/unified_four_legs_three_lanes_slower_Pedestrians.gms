@@ -105,11 +105,11 @@ you can add pedestrian delay too if this enough did not work
 $offtext
 cost..                                                                           f =e= Wv*[f_veh] + Wp*[f_ped];
 cost_ped..									 f_ped =e= [5*f_ped_throughput]/max(1, sum(m, sum(k, ped_Demand(m,k))));
-cost_veh..									 f_veh =e= [f_throughput + f_dist/100 + f_transit*5 + f_delay/50]/max(1, card(i) * card(k));
+cost_veh..									 f_veh =e= [f_throughput + f_dist/100 + f_transit*5 + f_delay/50]/max(1, sum(i, sum(j, vehicle_indi(i,j))) * card(k));
 cost_throughput..                                                                f_throughput =e= sum(vehicle_indi(i,j), sum(k, (1-g(i,j,k))));
-cost_distance..                                                                  f_dist =e= -sum(vehicle_indi(i,j), sum(k, (s(i,j,k) - s_init(i,j))*gamma(k))) / sum(i, sum(j, vehicle_indi(i,j)));
+cost_distance..                                                                  f_dist =e= -sum(vehicle_indi(i,j), sum(k, (s(i,j,k) - s_init(i,j))*gamma(k)));
 cost_transition..                                                                f_transit =e= sum(l, sum(k, p_c(l,k)));
-cost_delay..                                                                     f_delay =e= sum(vehicle_indi(i,j),  sum(k, wt_init(i,j)*(1-g(i,j,'7'))*gamma(k))) / (sum(i, sum(j, vehicle_indi(i,j))));
+cost_delay..                                                                     f_delay =e= sum(vehicle_indi(i,j), sum(k, wt_init(i,j)*(1-g(i,j,k))*gamma(k)));
 cost_ped_throughput..                                                            f_ped_throughput =e= -sum(k, sum(m, q(m,k)*ped_Demand(m,k)));
 
 *A relaxed version of Equation (23a).

@@ -693,7 +693,16 @@ class SingleIntersection:
         return fuel_cav, fuel_hdv
 
     def close_sumo_simulation(self):
+        import subprocess, time, signal
         traci.close()
+        # sumo-gui keeps its window open after traci.close(); send SIGTERM so it
+        # flushes and writes the XML output files, then wait for it to exit.
+        subprocess.call(['pkill', '-TERM', '-f', 'sumo'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(30):
+            if subprocess.call(['pgrep', '-f', 'sumo'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) != 0:
+                break
+            time.sleep(1)
+        time.sleep(2)  # extra buffer for filesystem flush
 
 
     def pedestrian_actuation(self, inter_id):

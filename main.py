@@ -13,7 +13,7 @@ def main(network_type, volume_type, control_type):
     env_single_intersection = SingleIntersection(paras)
 
     print("----Start SUMO...")
-    env_single_intersection.start_sumo(True, control_type, network_type, volume_type)
+    env_single_intersection.start_sumo(False, control_type, network_type, volume_type)
 
     print("----Initializing the agent...")
     agent_unified_four_legs_three_lanes = MpcAgent(paras, "unified_four_legs_three_lanes")
@@ -55,6 +55,6 @@ def main(network_type, volume_type, control_type):
 
 
 if __name__ == "__main__":
-    main("single_intersection", "symmetric", "multi_scale")
+    main("single_intersection", "asymmetric", "multi_scale")
     # volume_type: symmetric, asymmetric
     # control_type: "multi_scale", "actuated", "fixed_time"
