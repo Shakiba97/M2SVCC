@@ -1,13 +1,17 @@
 ## The entry point of the Multiscale SVCC algorithm.
+import argparse
 import traci
 from configs.set_parameters import set_parameters
 from environment.single_intersection import SingleIntersection
 from agent.mpc_agent import MpcAgent
 
 
-def main(network_type, volume_type, control_type):
+def main(network_type, volume_type, control_type, seed=None):
     print("----Get parameters...")
     paras = set_parameters(network_type, volume_type)
+    if seed is not None:
+        paras["random_seed"] = seed
+        paras["sumo_seed"] = seed
 
     print("----Build single intersection environments...")
     env_single_intersection = SingleIntersection(paras)
@@ -55,6 +59,11 @@ def main(network_type, volume_type, control_type):
 
 
 if __name__ == "__main__":
-    main("single_intersection", "asymmetric", "actuated")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=int, default=None, help="Random seed (overrides config default)")
+    parser.add_argument("--control", type=str, default="multi_scale", help="Control type: multi_scale, actuated, fixed_time")
+    parser.add_argument("--volume", type=str, default="asymmetric", help="Volume type: symmetric, asymmetric")
+    args = parser.parse_args()
+    main("single_intersection", args.volume, args.control, seed=args.seed)
     # control_type: "multi_scale", "actuated", "fixed_time"
     # volume_type: symmetric, asymmetric

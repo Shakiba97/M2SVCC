@@ -47,6 +47,9 @@ variable
          f_delay 'delay cost',
          f_ped_throughput 'pedestrian throughput cost',
 	 f_bike_throughput 'bike throughput cost',
+	 f_veh 'normalized vehicle cost',
+	 f_ped 'normalized pedestrian cost',
+	 f_bike 'normalized bike cost',
          v(i,j,k) 'speed of vehicle i on lane j at time step k',
          s(i,j,k) 'position of vehicle i on lane j at time step k';
 
@@ -67,6 +70,9 @@ equations
          cost_delay 'delay cost function',
          cost_ped_throughput 'pedestrian throughput cost',
 	 cost_bike_throughput 'bike throughput cost',
+	 cost_veh 'normalized vehicle cost',
+	 cost_ped 'normalized pedestrian cost',
+	 cost_bike 'normalized bike cost',
          vehicle_dynamics_1(i,j,k) 'vehicle dynamics',
          vehicle_dynamics_2(i,j,k) 'vehicle dynamics',
          car_following(i,j,k) 'car-following model',
@@ -111,11 +117,14 @@ I guess g here is not same as in the paper. 1 if passed, 0 if did not pass.
 
 you can add pedestrian delay too if this enough did not work
 $offtext
-cost..                                                                           f =e= Wv*[f_throughput + f_dist/100 + f_transit*5 + f_delay/50] + Wb*[5*f_bike_throughput] + Wp*[5*f_ped_throughput];
+cost..                                                                           f =e= Wv*[f_veh] + Wb*[f_bike] + Wp*[f_ped];
+cost_veh..                                                                       f_veh =e= [f_throughput + f_dist/100 + f_transit*5 + f_delay/50] / max(1, sum(i, sum(j, vehicle_indi(i,j))) * card(k));
+cost_ped..                                                                       f_ped =e= [5*f_ped_throughput] / max(1, sum(m, sum(k, ped_Demand(m,k))));
+cost_bike..                                                                      f_bike =e= [5*f_bike_throughput] / max(1, sum(n, sum(k, bike_Demand(n,k))));
 cost_throughput..                                                                f_throughput =e= sum(vehicle_indi(i,j), sum(k, (1-g(i,j,k))));
-cost_distance..                                                                  f_dist =e= -sum(vehicle_indi(i,j), sum(k, (s(i,j,k) - s_init(i,j))*gamma(k))) / sum(i, sum(j, vehicle_indi(i,j)));
+cost_distance..                                                                  f_dist =e= -sum(vehicle_indi(i,j), sum(k, (s(i,j,k) - s_init(i,j))*gamma(k)));
 cost_transition..                                                                f_transit =e= sum(l, sum(k, p_c(l,k)));
-cost_delay..                                                                     f_delay =e= sum(vehicle_indi(i,j),  sum(k, wt_init(i,j)*(1-g(i,j,'7'))*gamma(k))) / (sum(i, sum(j, vehicle_indi(i,j))));
+cost_delay..                                                                     f_delay =e= sum(vehicle_indi(i,j), sum(k, wt_init(i,j)*(1-g(i,j,'7'))*gamma(k)));
 cost_ped_throughput..                                                            f_ped_throughput =e= -sum(k, sum(m, q(m,k)*ped_Demand(m,k)));
 cost_bike_throughput..                                                           f_bike_throughput =e= -sum(k, sum(n, x(n,k)*bike_Demand(n,k)));
 
@@ -191,8 +200,8 @@ s.lo(i,j,k)$vehicle_indi(i,j) = -300;
 s.fx(i,j,"1")$vehicle_indi(i,j) = s_init(i,j);
 p.fx(l,'1') = p_init(l);
 
-model mo /cost, cost_throughput, cost_distance, cost_transition, cost_delay, cost_ped_throughput, cost_bike_throughput, vehicle_dynamics_1, vehicle_dynamics_2, car_following, vehicle_position_1, vehicle_position_2, traffic_rule, signal_rule_1, signal_rule_2, signal_rule_3,signal_rule_4, phase_equal_1, phase_equal_2, phase_equal_3, phase_equal_4, phase_equal_5, phase_equal_6, phase_equal_7, phase_equal_8, phase_equal_9, phase_equal_10, phase_equal_11, phase_equal_12, ped_phase_equal_1, ped_phase_equal_2, ped_phase_equal_3, ped_phase_equal_4, ped_phase_equal_5, ped_phase_equal_6, bike_phase_equal_1, bike_phase_equal_2, bike_phase_equal_3, bike_phase_equal_4/;
-*model mo /cost, cost_throughput, cost_distance, cost_transition, cost_delay, cost_ped_throughput, cost_bike_throughput, vehicle_dynamics_1, vehicle_dynamics_2, vehicle_position_1, vehicle_position_2, traffic_rule, signal_rule_1, signal_rule_2, signal_rule_3,signal_rule_4, phase_equal_1, phase_equal_2, phase_equal_3, phase_equal_4, phase_equal_5, phase_equal_6, phase_equal_7, phase_equal_8, phase_equal_9, phase_equal_10, phase_equal_11, phase_equal_12, ped_phase_equal_1, ped_phase_equal_2, ped_phase_equal_3, ped_phase_equal_4, ped_phase_equal_5, ped_phase_equal_6, bike_phase_equal_1, bike_phase_equal_2, bike_phase_equal_3, bike_phase_equal_4/;
+model mo /cost, cost_veh, cost_ped, cost_bike, cost_throughput, cost_distance, cost_transition, cost_delay, cost_ped_throughput, cost_bike_throughput, vehicle_dynamics_1, vehicle_dynamics_2, car_following, vehicle_position_1, vehicle_position_2, traffic_rule, signal_rule_1, signal_rule_2, signal_rule_3,signal_rule_4, phase_equal_1, phase_equal_2, phase_equal_3, phase_equal_4, phase_equal_5, phase_equal_6, phase_equal_7, phase_equal_8, phase_equal_9, phase_equal_10, phase_equal_11, phase_equal_12, ped_phase_equal_1, ped_phase_equal_2, ped_phase_equal_3, ped_phase_equal_4, ped_phase_equal_5, ped_phase_equal_6, bike_phase_equal_1, bike_phase_equal_2, bike_phase_equal_3, bike_phase_equal_4/;
+*model mo /cost, cost_veh, cost_ped, cost_bike, cost_throughput, cost_distance, cost_transition, cost_delay, cost_ped_throughput, cost_bike_throughput, vehicle_dynamics_1, vehicle_dynamics_2, vehicle_position_1, vehicle_position_2, traffic_rule, signal_rule_1, signal_rule_2, signal_rule_3,signal_rule_4, phase_equal_1, phase_equal_2, phase_equal_3, phase_equal_4, phase_equal_5, phase_equal_6, phase_equal_7, phase_equal_8, phase_equal_9, phase_equal_10, phase_equal_11, phase_equal_12, ped_phase_equal_1, ped_phase_equal_2, ped_phase_equal_3, ped_phase_equal_4, ped_phase_equal_5, ped_phase_equal_6, bike_phase_equal_1, bike_phase_equal_2, bike_phase_equal_3, bike_phase_equal_4/;
 
 
 *q.l('1','2')=EW;

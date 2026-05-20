@@ -33,10 +33,11 @@ class MpcAgent:
             os.mkdir(self.models_dir)
         #gams_dir = "/Library/Frameworks/GAMS.framework/Versions/49/Resources/"
         #self.ws = GamsWorkspace(self.models_dir, system_directory=gams_dir, debug=1)
-        self.ws = GamsWorkspace(self.models_dir, debug=1)
+        gams_dir = "/opt/gams"
+        self.ws = GamsWorkspace(self.models_dir, system_directory=gams_dir, debug=1)
         if paras["ped_phasing"] == "Concurrent":
             self.gams_file_slower = (self.models_dir + "/" + intersection_type + "_slower_Bikes_" + paras[
-                "ped_phasing"] + "_" + f"({paras["ped_subsetting"]})" + ".gms")
+                "ped_phasing"] + "_" + f"({paras['ped_subsetting']})" + ".gms")
         elif paras["ped_phasing"] == "Exclusive":
             self.gams_file_slower = (self.models_dir + "/" + intersection_type + "_slower_Bikes_" + paras[
                 "ped_phasing"] + ".gms")
@@ -371,13 +372,13 @@ class MpcAgent:
         # print(self.f_ped_throughput[-1]*5/5)
         # print(self.f_bike_throughput[-1]*5)
         #
-        Vehicle_cost=sum(self.f_throughput)/len(self.f_throughput) + sum(self.f_dist)/len(self.f_dist)/100 + sum(self.f_transit)/len(self.f_transit)*5 + sum(self.f_delay)/len(self.f_delay)/50
-        Pedestrian_cost=sum(self.f_ped_throughput)/len(self.f_ped_throughput)*5
-        Bike_cost=sum(self.f_bike_throughput)/len(self.f_bike_throughput)*5
-
-        print("Vehicle_cost: ", Vehicle_cost)
-        print("Pedestrian_cost: ", Pedestrian_cost)
-        print("Bike_cost: ", Bike_cost)
+        # Vehicle_cost    = list(self.model_slower.out_db["f_veh"])[0].level
+        # Pedestrian_cost = list(self.model_slower.out_db["f_ped"])[0].level
+        # Bike_cost       = list(self.model_slower.out_db["f_bike"])[0].level
+        #
+        # print("Vehicle_cost: ", Vehicle_cost)
+        # print("Pedestrian_cost: ", Pedestrian_cost)
+        # print("Bike_cost: ", Bike_cost)
 
         #
         # self.ped_times_veh.append(Pedestrian_cost/Vehicle_cost)
@@ -497,6 +498,8 @@ class MpcAgent:
                                 cross] / (crossing_width * 3.28) - self.paras["yellow_time"] - self.paras[
                                                 "all_red_time"] - self.paras["ped_FDW"] - self.paras["ped_LPI"]
                             Gp = max(Gp, minimum_green)
+                        if self.paras["weight(Vehicles/Pedestrians/Bikes)"] == (1, 0, 0): #for vehicle-only control there is no pedestrian and bike responsive phase
+                            Gp = 25
                     # print("Gp: ", Gp)
                     # Gp= 0
                     self.extension_steps = max(round(Gp / self.delta_T), 1)

@@ -151,12 +151,15 @@ class SingleIntersection:
         )
 
         ## Start SUMO.
+        sumo_seed = str(self.paras.get("sumo_seed", 42))
         traci.start(
             [
                 sumoBinary,
                 "-c",
                 model_file_name,
                 "--start",
+                "--seed",
+                sumo_seed,
                 "--queue-output",
                 queue_file,
                 "--tripinfo-output",
@@ -843,6 +846,24 @@ class SingleIntersection:
                 if veh_id in network_vehs:
                     traci.vehicle.setSpeed(veh_id, speed_commands[veh_id])
 
+            # Bike lane change control — exclusive phase only, inside intersection only
+            if self.paras["ped_phasing"] == "Exclusive":
+                exclusive_idx = self.paras.get("exclusive_phase_ind", 8)
+                cur_phase_now = int(traci.trafficlight.getPhase(inter_id))
+                for bike_id in list(self.paras["bike_ids"]):
+                    if bike_id not in network_vehs:
+                        continue
+                    lane_id = traci.vehicle.getLaneID(bike_id)
+                    if not lane_id.startswith(":"):
+                        # bike is on an approaching lane — no lane change allowed
+                        traci.vehicle.setLaneChangeMode(bike_id, 0)
+                    elif cur_phase_now == exclusive_idx:
+                        # bike is inside the intersection during exclusive phase
+                        traci.vehicle.setLaneChangeMode(bike_id, 0b011001000000)
+                        print(f"  [Exclusive] bike {bike_id} on internal lane {lane_id}, lane change enabled")
+                    else:
+                        traci.vehicle.setLaneChangeMode(bike_id, 0)
+
 
     def move_one_step_forward(self):
         traci.simulationStep()
@@ -901,15 +922,16 @@ class SingleIntersection:
         else:
             raise
 
+        seed_tag = f"_seed({self.paras.get('random_seed', 1)})"
         if control_type == "multi_scale":
-            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["ped_subsetting"]}_{self.paras["ped_demand_symmetry"]}_{self.paras["weight(Vehicles/Pedestrians/Bikes)"]}_{a}.txt"
+            file_name = f"Results/{control_type}_penetration({self.paras['penetration']})_EVratio({self.paras['ratio_ev']})_{self.paras['ped_phasing']}_{self.paras['ped_subsetting']}_{self.paras['ped_demand_symmetry']}_{self.paras['weight(Vehicles/Pedestrians/Bikes)']}_{a}{seed_tag}.txt"
         else:
-            file_name = f"Results/{control_type}_penetration({self.paras["penetration"]})_EVratio({self.paras["ratio_ev"]})_{self.paras["ped_phasing"]}_{self.paras["ped_subsetting"]}_{self.paras["ped_demand_symmetry"]}_{a}.txt"
+            file_name = f"Results/{control_type}_penetration({self.paras['penetration']})_EVratio({self.paras['ratio_ev']})_{self.paras['ped_phasing']}_{self.paras['ped_subsetting']}_{self.paras['ped_demand_symmetry']}_{a}{seed_tag}.txt"
         with open(file_name, 'w') as file:
-            file.write(f"average fuel consumption (external model) for CAVs {control_type} (in mg): {self.fuel_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ice"]),1)}\n")
-            file.write(f"average fuel consumption (external model) for HDVs {control_type} (in mg): {self.fuel_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ice"]),1)}\n")
-            file.write(f"average power consumption (external model) for CAVs {control_type} (in Kw.s): {self.power_total_cav_external_model / max(len(self.paras["veh_id_with_ev"]["cav_ev"]),1)}\n")
-            file.write(f"average power consumption (external model) for HDVs {control_type} (in Kw.s): {self.power_total_hdv_external_model / max(len(self.paras["veh_id_with_ev"]["hdv_ev"]),1)}\n")
+            file.write(f"average fuel consumption (external model) for CAVs {control_type} (in mg): {self.fuel_total_cav_external_model / max(len(self.paras['veh_id_with_ev']['cav_ice']),1)}\n")
+            file.write(f"average fuel consumption (external model) for HDVs {control_type} (in mg): {self.fuel_total_hdv_external_model / max(len(self.paras['veh_id_with_ev']['hdv_ice']),1)}\n")
+            file.write(f"average power consumption (external model) for CAVs {control_type} (in Kw.s): {self.power_total_cav_external_model / max(len(self.paras['veh_id_with_ev']['cav_ev']),1)}\n")
+            file.write(f"average power consumption (external model) for HDVs {control_type} (in Kw.s): {self.power_total_hdv_external_model / max(len(self.paras['veh_id_with_ev']['hdv_ev']),1)}\n")
 
             #file.write(f"average fuel consumption for {control_type} scenario (SUMO output) (in mg): {self.fuel_total_cav_sumo / len(self.paras['cav_ids']['all'])}\n")
             file.write(f"average waiting time for {control_type} scenario (in s): {self.waiting_time_avg}\n")
@@ -924,7 +946,7 @@ class SingleIntersection:
             file.write(f"number of conflicts between vehicles and vehicles: {conflict_cnt_VehVeh}\n")
             file.write(f"number of CAVs passing through the specific intersection in {control_type} scenario: {len(self.paras['cav_ids'])}\n")
             file.write(f"number of pedestrians passing through the specific intersection in {control_type} scenario: {len(self.paras['ped_ids'])}\n")
-            file.write(f"number of Bikes passing through the specific intersection (sep) in {control_type} scenario: {len(self.paras["bike_ids"])}\n")
+            file.write(f"number of Bikes passing through the specific intersection (sep) in {control_type} scenario: {len(self.paras['bike_ids'])}\n")
             file.write(f"The time of simulation termination in {control_type} scenario: {step/2}\n")
             file.write(f"average phase lengths:  {self.phase_avg}\n")
             file.write(f"number of times each phase happened: {self.phase_ntimes}\n")
@@ -933,10 +955,10 @@ class SingleIntersection:
         ## Start SUMO again for the needed traci function.
         if self.paras["ped_phasing"] == "Exclusive":
             model_file = os.path.dirname(os.path.dirname(os.path.realpath(
-                __file__))) + f"/environment/network_model/single_intersection_multi_scale_{self.paras["ped_phasing"]}.sumocfg"
+                __file__))) + f"/environment/network_model/single_intersection_multi_scale_{self.paras['ped_phasing']}.sumocfg"
         else:
             model_file = os.path.dirname(os.path.dirname(os.path.realpath(
-                __file__))) + f"/environment/network_model/single_intersection_multi_scale_{self.paras["ped_phasing"]}_({self.paras["ped_subsetting"]}).sumocfg"
+                __file__))) + f"/environment/network_model/single_intersection_multi_scale_{self.paras['ped_phasing']}_({self.paras['ped_subsetting']}).sumocfg"
         # traci.start(["sumo", "-c", model_file, "--start"])
 
         tree = ET.parse(file)
@@ -1120,15 +1142,15 @@ class SingleIntersection:
                         - 0.0489 * acc**3
                     )
                     power_temp_temp = (1266 * speed * acc + 1266 * 9.8 * 0.006 * speed + 1.3 * speed ** 3) / 1000
-                    # power_temp = power_temp_temp if power_temp_temp > 0 else 0.9 * power_temp_temp
+                    power_temp = power_temp_temp if power_temp_temp > 0 else 0.9 * power_temp_temp
                     if cars_lane[j] in self.paras["veh_id_with_ev"]['cav_ice']:
                         fuel_cav += fuel_temp
                     elif cars_lane[j] in self.paras["veh_id_with_ev"]["hdv_ice"]:
                         fuel_hdv += fuel_temp
                     elif cars_lane[j] in self.paras["veh_id_with_ev"]["cav_ev"]:
-                        power_cav += power_temp_temp
+                        power_cav += power_temp
                     elif cars_lane[j] in self.paras["veh_id_with_ev"]["hdv_ev"]:
-                        power_hdv += power_temp_temp
+                        power_hdv += power_temp
         return fuel_cav, fuel_hdv, power_cav, power_hdv
 
     def get_instant_fuel_sumo(self):

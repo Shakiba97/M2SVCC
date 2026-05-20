@@ -12,9 +12,9 @@ class SumoNetworkReader:
 
         if self.paras["ped_phasing"] == "Concurrent":
             network_file = (data_dir + "single_intersection" + "_bike_" + self.paras[
-                "ped_phasing"] + "_" + f"({self.paras["ped_subsetting"]})" + ".net.xml")
+                "ped_phasing"] + "_" + f"({self.paras['ped_subsetting']})" + ".net.xml")
             signal_file = (data_dir + "single_intersection" + "_" + self.paras[
-                "ped_phasing"] + "_" + f"({self.paras["ped_subsetting"]})" + ".add.xml")
+                "ped_phasing"] + "_" + f"({self.paras['ped_subsetting']})" + ".add.xml")
         elif self.paras["ped_phasing"] == "Exclusive":
             network_file = (data_dir + "single_intersection" + "_bike_" + self.paras["ped_phasing"] + ".net.xml")
             signal_file = (data_dir + "single_intersection" + "_" + self.paras["ped_phasing"] + ".add.xml")

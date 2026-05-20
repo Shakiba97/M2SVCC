@@ -19,7 +19,7 @@ def set_common_paras(paras):
     # Discount ratio used to stabilize the MPC problem.
     paras["discount_ratio"] = 0.95
     # weighting factor for each mode (for the slower scale problem optimization)(must add up to 1)
-    paras["weight(Vehicles/Pedestrians/Bikes)"] = (0.5, 0.1, 0.1)
+    paras["weight(Vehicles/Pedestrians/Bikes)"] = (0.5, 0.1, 0.3)
 
     ## IDM model parameters, see Equation (11) in the second paper.
     # Maximum acceleration that the vechiles can reach, in m/s^{2}.
@@ -41,12 +41,12 @@ def set_common_paras(paras):
 
     ## Simulation parameters.
     # Penetration rate of CAVs.
-    paras["penetration"] = 0.25
+    paras["penetration"] = 1
     # Concurrent or Exclusive Pedestrian phasing
-    paras["ped_phasing"] = "Concurrent" #"Exclusive" or "Concurrent" or "Hybrid" (bike concur ped excl)
-    paras["ped_subsetting"] = "permitted_right"  ## Concurrent subsettings: permitted_right, protected_right, LPI, delayed_turn
+    paras["ped_phasing"] = "Exclusive" #"Exclusive" or "Concurrent" or "Hybrid" (bike concur ped excl)
+    paras["ped_subsetting"] = "delayed_turn"  ## Concurrent subsettings: permitted_right, protected_right, LPI, delayed_turn
     # Random seed used to generate the volume.
-    paras["random_seed"] = 1
+    paras["random_seed"] = 23423  #[23423.]
     # simulation duration.
     paras["simulation_duration"] = 900
     # Simulation steps.
@@ -91,8 +91,8 @@ def set_common_paras(paras):
     # Ratio of Electric Vehicles (between 0 and 1)
     paras["ratio_ev"] = 0.5
     # Poisson gamma for pedestrian demand
-    paras["poisson_gamma_pedestrian"] = 0.04 # high:0.07 medium=0.04 low=0.01
-    paras["poisson_gamma_bike"] = 0.02 # high:0.03 medium=0.02 low=0.01
+    paras["poisson_gamma_pedestrian"] = 0.01 # high:0.07 medium=0.04 low=0.01
+    paras["poisson_gamma_bike"] = 0.01 # high:0.03 medium=0.02 low=0.01
     paras["ped_demand_symmetry"] = "Asymmetric" # Asymmetric or Symmetric pedestrian demand
 
     ## pedestrian parameters:
@@ -112,19 +112,19 @@ def set_volume_paras(paras):
         paras["depart_rate"] = {
             "time_interval": time_interval_seconds,
             "vol_we_main": [
-                low_volume + (high_volume - low_volume) / (num_interval - 1) * i
+                low_volume*0.75 + (high_volume*0.75 - low_volume*0.75) / (num_interval - 1) * i
                 for i in range(num_interval)
             ],
             "vol_ew_main": [
-                low_volume + (high_volume - low_volume) / (num_interval - 1) * i
+                low_volume*0.75 + (high_volume*0.75 - low_volume*0.75) / (num_interval - 1) * i
                 for i in range(num_interval)
             ],
             "vol_ns_main": [
-                low_volume + (high_volume - low_volume) / (num_interval - 1) * i
+                low_volume*0.75 + (high_volume*0.75 - low_volume*0.75) / (num_interval - 1) * i
                 for i in range(num_interval)
             ],
             "vol_sn_main": [
-                low_volume + (high_volume - low_volume) / (num_interval - 1) * i
+                low_volume*0.75 + (high_volume*0.75 - low_volume*0.75) / (num_interval - 1) * i
                 for i in range(num_interval)
             ],
         }
