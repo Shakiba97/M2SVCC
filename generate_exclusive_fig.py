@@ -16,8 +16,8 @@ CONCURRENT_DIR = os.path.join(os.path.dirname(__file__), "Results", "Concurrent-
 EXCLUSIVE_DIR  = os.path.join(os.path.dirname(__file__), "Results", "Exclusive-Asymmetric")
 OUT_DIR        = os.path.join(os.path.dirname(__file__), "Results", "Concurrent figurs")
 
-# No fixed seed list — all available seeds are loaded per file (Welch's t-test doesn't require matching seeds)
-SEEDS      = None  # unused; dynamic loading used instead
+# Fixed seeds used for actuated/svcc modes to match the concurrent figure exactly
+SEEDS = [10, 1000, 10000, 23423, 30000]
 PED_LEVELS = ["LowPed", "MedPed", "HighPed"]
 PED_LABEL  = {
     "LowPed":  "Low Pedestrian Demand",
@@ -128,40 +128,47 @@ def iqr_filter(values):
 
 def load_seed_vals(ped, weight_str, mode="exclusive"):
     """
-    Load all available seed files (no fixed seed list).
-    mode='actuated'  -> Concurrent-Asymmetric actuated files
-    mode='svcc'      -> Exclusive-Asymmetric Concurrent_(1.0, 0.0) files
-    mode='exclusive' -> Exclusive-Asymmetric Exclusive_(w) files
-    Per-metric IQR outlier filtering is applied before returning.
+    mode='actuated'  -> Concurrent-Asymmetric, fixed seeds, no IQR  (matches concurrent figure)
+    mode='svcc'      -> Concurrent-Asymmetric, fixed seeds, no IQR  (matches concurrent figure)
+    mode='exclusive' -> Exclusive-Asymmetric, all available seeds, IQR filtering
     """
     vals = {m: [] for m in METRIC_PATTERNS}
 
     if mode == "actuated":
-        directory = CONCURRENT_DIR
-        pattern   = re.compile(
-            rf"actuated_penetration\(1\)_EVratio\(0\)_{ped}_seed\((\d+)\)\.txt")
-        patterns  = ACTUATED_PATTERNS
-    elif mode == "svcc":
-        directory = EXCLUSIVE_DIR
-        wesc      = re.escape(weight_str)
-        pattern   = re.compile(
-            rf"multi_scale_penetration\(1\)_EVratio\(0\)_Concurrent_{wesc}_{ped}_seed\((\d+)\)\.txt")
-        patterns  = METRIC_PATTERNS
-    else:  # exclusive
-        directory = EXCLUSIVE_DIR
-        wesc      = re.escape(weight_str)
-        pattern   = re.compile(
-            rf"multi_scale_penetration\(1\)_EVratio\(0\)_Exclusive_{wesc}_{ped}_seed\((\d+)\)\.txt")
-        patterns  = METRIC_PATTERNS
-
-    for fname in os.listdir(directory):
-        if pattern.fullmatch(fname):
-            for m, v in parse_file(os.path.join(directory, fname), patterns).items():
+        # Use fixed seed list — identical to generate_asymmetric_fig.py
+        for seed in SEEDS:
+            fname = f"actuated_penetration(1)_EVratio(0)_{ped}_seed({seed}).txt"
+            path  = os.path.join(CONCURRENT_DIR, fname)
+            if not os.path.exists(path):
+                continue
+            for m, v in parse_file(path, ACTUATED_PATTERNS).items():
                 if v is not None:
                     vals[m].append(v)
+        return vals   # no IQR filtering
 
-    # Remove per-metric outliers using Tukey's 1.5×IQR fence
-    return {m: iqr_filter(v) for m, v in vals.items()}
+    elif mode == "svcc":
+        # Use fixed seed list — identical to generate_asymmetric_fig.py
+        for seed in SEEDS:
+            fname = (f"multi_scale_penetration(1)_EVratio(0)_"
+                     f"Concurrent_{weight_str}_{ped}_seed({seed}).txt")
+            path  = os.path.join(CONCURRENT_DIR, fname)
+            if not os.path.exists(path):
+                continue
+            for m, v in parse_file(path, METRIC_PATTERNS).items():
+                if v is not None:
+                    vals[m].append(v)
+        return vals   # no IQR filtering
+
+    else:  # exclusive — dynamic scan + IQR
+        wesc    = re.escape(weight_str)
+        pattern = re.compile(
+            rf"multi_scale_penetration\(1\)_EVratio\(0\)_Exclusive_{wesc}_{ped}_seed\((\d+)\)\.txt")
+        for fname in os.listdir(EXCLUSIVE_DIR):
+            if pattern.fullmatch(fname):
+                for m, v in parse_file(os.path.join(EXCLUSIVE_DIR, fname), METRIC_PATTERNS).items():
+                    if v is not None:
+                        vals[m].append(v)
+        return {m: iqr_filter(v) for m, v in vals.items()}
 
 
 def significance_stars(base_arr, alt_arr):
