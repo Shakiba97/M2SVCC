@@ -154,44 +154,44 @@ def plot_subplot(ax, data_dir, ped, title):
 
     # ── M2SVCC points ─────────────────────────────────────────────────────────
     for v, p, w in m2svcc_pts:
-        ax.scatter(v, p, color=M2SVCC_COLOR, s=70, zorder=4,
+        ax.scatter(v, p, color=M2SVCC_COLOR, s=100, zorder=4,
                    edgecolors="white", linewidths=0.6)
         ax.annotate(W_SHORT[w], (v, p),
                     textcoords="offset points", xytext=(5, 4),
-                    fontsize=7.5, color="#1a1a1a")
+                    fontsize=10, color="#1a1a1a")
 
     # ── SVCC ──────────────────────────────────────────────────────────────────
     if svcc_v is not None:
-        ax.scatter(svcc_v, svcc_p, marker="D", s=100, color=SVCC_COLOR,
+        ax.scatter(svcc_v, svcc_p, marker="D", s=140, color=SVCC_COLOR,
                    zorder=5, edgecolors="white", linewidths=0.6)
         ax.annotate("SVCC", (svcc_v, svcc_p),
                     textcoords="offset points", xytext=(5, 4),
-                    fontsize=8, fontweight="bold", color=SVCC_COLOR)
+                    fontsize=11, fontweight="bold", color=SVCC_COLOR)
 
     # ── Actuated: plot in-axis if close, else annotate off-axis ───────────────
     if act_v is not None:
         in_view = (xl[0] <= act_v <= xl[1]) and (yl[0] <= act_p <= yl[1])
         if in_view:
-            ax.scatter(act_v, act_p, marker="*", s=200, color=ACT_COLOR,
+            ax.scatter(act_v, act_p, marker="*", s=280, color=ACT_COLOR,
                        zorder=5, edgecolors="white", linewidths=0.4)
             ax.annotate("Actuated", (act_v, act_p),
                         textcoords="offset points", xytext=(5, 4),
-                        fontsize=8, fontweight="bold", color=ACT_COLOR)
+                        fontsize=11, fontweight="bold", color=ACT_COLOR)
         else:
             # Show as off-axis annotation in top-right corner
             ax.annotate(
                 f"★ Actuated\n({act_v:.1f}, {act_p:.1f})",
                 xy=(0.97, 0.97), xycoords="axes fraction",
-                ha="right", va="top", fontsize=8,
+                ha="right", va="top", fontsize=10,
                 color=ACT_COLOR, fontweight="bold",
                 bbox=dict(boxstyle="round,pad=0.3", fc="white",
                           ec=ACT_COLOR, alpha=0.85, linewidth=0.8),
             )
 
-    ax.set_title(title, fontsize=11, fontweight="bold", pad=6)
-    ax.set_xlabel("Veh Waiting Time (s)", fontsize=9)
-    ax.set_ylabel("Ped Time Loss (s)", fontsize=9)
-    ax.tick_params(labelsize=8)
+    ax.set_title(title, fontsize=13, fontweight="bold", pad=8)
+    ax.set_xlabel("Veh Waiting Time (s)", fontsize=12)
+    ax.set_ylabel("Ped Time Loss (s)", fontsize=12)
+    ax.tick_params(labelsize=11)
     ax.grid(True, linestyle=":", linewidth=0.5, alpha=0.6)
     ax.spines[["top", "right"]].set_visible(False)
 
@@ -210,20 +210,21 @@ for row_idx, (folder, label) in enumerate(SCENARIOS):
 # ── legend ────────────────────────────────────────────────────────────────────
 legend_elements = [
     Line2D([0], [0], marker="*", color="w", markerfacecolor=ACT_COLOR,
-           markersize=12, label="Actuated"),
+           markersize=16, label="Actuated"),
     Line2D([0], [0], marker="D", color="w", markerfacecolor=SVCC_COLOR,
-           markersize=9, label="SVCC (1.0, 0.0)"),
+           markersize=13, label="SVCC (1.0, 0.0)"),
     Line2D([0], [0], marker="o", color="w", markerfacecolor=M2SVCC_COLOR,
-           markersize=9, label="M2SVCC (labelled by weight)"),
-    Line2D([0], [0], color="#888888", linewidth=1.5, linestyle="--",
+           markersize=13, label="M2SVCC (labelled by weight)"),
+    Line2D([0], [0], color="#888888", linewidth=2.0, linestyle="--",
            label="Pareto frontier"),
 ]
 fig.legend(handles=legend_elements, loc="lower center", ncol=4,
-           fontsize=9, frameon=True, bbox_to_anchor=(0.5, -0.04))
+           fontsize=12, frameon=True, bbox_to_anchor=(0.5, -0.04),
+           borderpad=1.0, handlelength=2.5)
 
 fig.suptitle(
     "Pareto Frontier: Vehicle Waiting Time vs Pedestrian Time Loss",
-    fontsize=13, fontweight="bold",
+    fontsize=16, fontweight="bold",
 )
 
 out_png = os.path.join(BASE, "Results", "fig_pareto.png")

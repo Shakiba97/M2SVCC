@@ -300,7 +300,7 @@ def plot_pareto():
                     (vd, pd_),
                     textcoords="offset points",
                     xytext=(5, 4),
-                    fontsize=7.5,
+                    fontsize=10,
                     color=sty["color"],
                     alpha=min(alpha + 0.2, 1.0),
                 )
@@ -321,9 +321,10 @@ def plot_pareto():
                 linestyle="-", zorder=2, alpha=0.55,
             )
 
-        ax.set_xlabel("Vehicle Time Loss (s)", fontsize=11)
-        ax.set_ylabel("Pedestrian Time Loss (s)", fontsize=11)
-        ax.set_title(f"Concurrent-{scenario}", fontsize=12, fontweight="bold")
+        ax.set_xlabel("Vehicle Time Loss (s)", fontsize=14)
+        ax.set_ylabel("Pedestrian Time Loss (s)", fontsize=14)
+        ax.tick_params(labelsize=12)
+        ax.set_title(f"Concurrent-{scenario}", fontsize=15, fontweight="bold")
         ax.grid(True, linestyle=":", alpha=0.45)
 
         # "Better" annotation arrow
@@ -339,7 +340,7 @@ def plot_pareto():
         )
         ax.text(
             xlim[0] + xrange * 0.23, ylim[0] + yrange * 0.23,
-            "Better\n(both lower)", fontsize=8, color="#555555",
+            "Better\n(both lower)", fontsize=11, color="#555555",
             va="bottom",
         )
 
@@ -358,16 +359,19 @@ def plot_pareto():
     axes[-1].legend(
         handles=ctrl_handles + ped_handles,
         loc="upper right",
-        fontsize=9,
+        fontsize=12,
         title="Controller / Ped Level",
-        title_fontsize=9,
+        title_fontsize=13,
         framealpha=0.88,
+        borderpad=1.0,
+        handlelength=2.5,
+        handletextpad=0.8,
     )
 
     fig.suptitle(
         "Pareto Frontier: Vehicle Delay vs Pedestrian Delay\n"
         "(averaged across seeds; M2SVCC targets both lower vehicle and lower pedestrian delay)",
-        fontsize=11, fontweight="bold", y=1.01,
+        fontsize=14, fontweight="bold", y=1.01,
     )
     fig.tight_layout()
 
