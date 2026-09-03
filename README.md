@@ -133,7 +133,7 @@ evaluated performance in simulation and real-world deployment (Mcity testbed), a
 
 ## Related work
 
-> Naderian, S., et al. (2026). *Multimodal MultiScale Signal-Vehicle Coupled Control* (in press). [(link)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6172842)
+> Naderian, S., et al. (2026). *Multimodal MultiScale Signal-Vehicle Coupled Control*, Transportation Research Part C: Emerging Technologies. [(link)](https://www.sciencedirect.com/science/article/pii/S0968090X26004183)
   
 > Guo, Q., & Ban, X. (2023). *A multi-scale control framework for urban traffic control with connected and automated vehicles* Transportation Research Part B. [(link)](https://www.sciencedirect.com/science/article/abs/pii/S0191261523001121)
 
