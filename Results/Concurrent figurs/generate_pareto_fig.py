@@ -196,7 +196,7 @@ def _short(w):
 
 def plot_scenario(load_fn, weights_list, title, out_path):
     fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharey=False)
-    fig.suptitle(title, fontsize=15, fontweight="bold", y=1.02)
+    fig.suptitle(title, fontsize=17, fontweight="bold", y=1.02)
 
     for ax, ped in zip(axes, PED_LEVELS):
         pts = load_fn(ped)
@@ -222,7 +222,7 @@ def plot_scenario(load_fn, weights_list, title, out_path):
                        marker="o")
             ax.annotate(_short(w), (vt, pt),
                         textcoords="offset points", xytext=(5, 4),
-                        fontsize=7.5, color="#1a1a1a",
+                        fontsize=10, color="#1a1a1a",
                         fontweight="bold" if on_pf else "normal")
 
         # ── line connecting Pareto-optimal points ────────────────────────────
@@ -245,12 +245,12 @@ def plot_scenario(load_fn, weights_list, title, out_path):
                            linewidths=1.2, zorder=6)
                 ax.annotate(ref_key, (vt, pt),
                             textcoords="offset points", xytext=(6, 4),
-                            fontsize=8.5, fontweight="bold", color=ref_color)
+                            fontsize=11, fontweight="bold", color=ref_color)
 
-        ax.set_title(PED_LABEL[ped], fontsize=11, fontweight="bold")
-        ax.set_xlabel("Vehicle Time Loss (s)", fontsize=10)
-        ax.set_ylabel("Pedestrian Time Loss (s)", fontsize=10)
-        ax.tick_params(labelsize=9)
+        ax.set_title(PED_LABEL[ped], fontsize=14, fontweight="bold")
+        ax.set_xlabel("Vehicle Time Loss (s)", fontsize=13)
+        ax.set_ylabel("Pedestrian Time Loss (s)", fontsize=13)
+        ax.tick_params(labelsize=12)
         ax.grid(True, linestyle=":", alpha=0.4)
         ax.spines[["top", "right"]].set_visible(False)
         ax.set_facecolor("#f9f9f9")
@@ -258,21 +258,24 @@ def plot_scenario(load_fn, weights_list, title, out_path):
     # ── shared legend ─────────────────────────────────────────────────────────
     legend_handles = [
         Line2D([0], [0], marker="o", color="w", markerfacecolor=M2SVCC_COLOR,
-               markeredgecolor="white", markersize=9, label="M2SVCC (Pareto-optimal: white edge)"),
-        Line2D([0], [0], color=PARETO_COLOR, linewidth=2.0, linestyle="--",
+               markeredgecolor="white", markersize=13, label="M2SVCC (Pareto-optimal: white edge)"),
+        Line2D([0], [0], color=PARETO_COLOR, linewidth=2.5, linestyle="--",
                label="Pareto front"),
         Line2D([0], [0], marker="D", color="w", markerfacecolor=ACT_COLOR,
-               markeredgecolor="white", markersize=9, label="Actuated"),
+               markeredgecolor="white", markersize=13, label="Actuated"),
         Line2D([0], [0], marker="s", color="w", markerfacecolor=SVCC_COLOR,
-               markeredgecolor="white", markersize=9, label="SVCC"),
+               markeredgecolor="white", markersize=13, label="SVCC"),
     ]
     fig.legend(
         handles=legend_handles,
         loc="lower center",
         ncol=4,
         bbox_to_anchor=(0.5, -0.10),
-        fontsize=9,
+        fontsize=12,
         frameon=True,
+        borderpad=1.0,
+        handlelength=2.5,
+        handletextpad=0.8,
     )
 
     fig.tight_layout()
