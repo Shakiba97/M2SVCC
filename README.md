@@ -78,7 +78,7 @@ Ensure GAMS and SUMO are installed and accessible on your `PATH` before running.
 ### Single intersection (SUMO simulation)
 The intersection on Denny Way and Faireview, Downtown Seattle, Washington:
 <p align="center">
-  <img src="Results/pics/Picture1.png" width="60%"/>
+  <img src="Slides/Picture11.png" width="60%"/>
 </p>
 
 #### Performance Metrics:  
@@ -105,7 +105,7 @@ The framework also exposes clear policy trade-offs:
 - **Concurrent-delayed turn**: most balanced across all three dimensions
 
 <p align="center">
-  <img src="Results/pics/Picture2.png" width="90%"/>
+  <img src="Slides/Picture22.png" width="90%"/>
 </p>
 
 ### Mcity network real-world testing, University of Michigan, Michigan
