@@ -6,8 +6,12 @@ class SumoRoutesGenerator:
     def __init__(self, paras):
         self.paras = paras
 
-    def generate_routes_for_single_intersection(self):
+    def generate_routes_for_single_intersection(self, file_name=None):
         """Generate vehicles and corresponding routes.
+
+        Args:
+            file_name: where to write the route file. Default (None): the shared
+                network_model/single_intersection.rou.xml named in the .sumocfg files.
 
         Returns:
             cav_ids and hdv_ids, each of which contains four types of information.
@@ -39,7 +43,8 @@ class SumoRoutesGenerator:
         model_dir = os.path.dirname(os.path.realpath(__file__)) + "/network_model"
         if not os.path.exists(model_dir):
             os.mkdir(model_dir)
-        file_name = model_dir + "/single_intersection.rou.xml"
+        if file_name is None:
+            file_name = model_dir + "/single_intersection.rou.xml"
         poisson_gamma= self.paras["poisson_gamma_pedestrian"] #average number of pedestrian at each second
         # high:0.04 medium=0.02 low=0.01
         scenario = self.paras["ped_demand_symmetry"] # Asymmetric or Symmetric pedestrian demand

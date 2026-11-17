@@ -16,7 +16,8 @@ from .sumo_routes_generator import SumoRoutesGenerator
 
 
 class SingleIntersection:
-    def __init__(self, paras):
+    def __init__(self, paras, route_file=None):
+        # route_file=None writes the shared network_model/single_intersection.rou.xml (as before).
         self.paras = paras
         print("--------Building SUMO network...")
         network_reader = SumoNetworkReader(self.paras)
@@ -26,7 +27,7 @@ class SingleIntersection:
         print("--------Generating vehicles and routes")
         routes_generator = SumoRoutesGenerator(self.paras)   ## for a generalized case, we assume that the route file is already given to us
         ## TODO: generalize the route generator
-        cav_ids, hdv_ids, veh_id_with_ev = routes_generator.generate_routes_for_single_intersection()
+        cav_ids, hdv_ids, veh_id_with_ev = routes_generator.generate_routes_for_single_intersection(route_file)
         self.paras["ped_ids"] = set()
         self.paras["cav_ids"] = cav_ids["all"]
         self.paras["hdv_ids"] = hdv_ids["all"]
@@ -693,15 +694,25 @@ class SingleIntersection:
         return fuel_cav, fuel_hdv
 
     def close_sumo_simulation(self):
-        import subprocess, time, signal
-        traci.close()
-        # sumo-gui keeps its window open after traci.close(); send SIGTERM so it
-        # flushes and writes the XML output files, then wait for it to exit.
-        subprocess.call(['pkill', '-TERM', '-f', 'sumo'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        for _ in range(30):
-            if subprocess.call(['pgrep', '-f', 'sumo'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) != 0:
-                break
-            time.sleep(1)
+        import subprocess, time
+        # Stop only the SUMO process this run started. (A `pkill -f sumo` here used to stop
+        # every SUMO on the machine, e.g. parallel training runs.)
+        conn = traci.getConnection() if hasattr(traci, "getConnection") else None
+        proc = getattr(conn, "_process", None)
+        if proc is None:  # libsumo, or a SUMO that traci did not launch
+            traci.close()
+        else:
+            traci.close(wait=False)
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                # sumo-gui keeps its window open after traci.close(); SIGTERM makes it
+                # flush and write the XML output files, then exit.
+                proc.terminate()
+                try:
+                    proc.wait(timeout=30)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
         time.sleep(2)  # extra buffer for filesystem flush
 
 
